@@ -71,7 +71,7 @@
 #define TABLE_SIZE_B 8192
 const int16_t WAVE_TABLE_SIZES[NUM_TABLES] = {TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_B, TABLE_SIZE_B, TABLE_SIZE_B};
 const int8_t* WAVE_TABLES[NUM_TABLES] = {SQUARE_NO_ALIAS_2048_DATA, SIN2048_DATA, SAW2048_DATA, TRIANGLE2048_DATA, CHUM9_DATA, AAH8192_DATA, WHITENOISE8192_DATA};
-const int8_t FREQ_SHIFT[NUM_TABLES] = {0, 0, 0, 0, 8, 8, 0, 0};
+const int8_t FREQ_SHIFT[NUM_TABLES] = {0, 0, 0, 0, 8, 8, 0};
 #define IS_NOISE_TABLE(x) (x / NUM_TABLES >= 6)
 
 #include <tables/waveshape_chebyshev_3rd_256_int8.h>
@@ -83,9 +83,9 @@ WaveShaper<char>* WAVE_SHAPERS[NUM_SHAPES-1] = {&wshape_chebyshev3, &wshape_cheb
 
 #define NUM_WAVEFORMS (NUM_SHAPES * NUM_TABLES)
 const char* TABLE_NAMES[NUM_WAVEFORMS] = {
-  "SQU", "SIN", "SAW", "TRI", "CHU", "AAH", "NOI", "PIN",
-  "SQ3", "SI3", "SA3", "TR3", "CH3", "AA3", "NOI3","PI3",
-  "SQ5", "SI5", "SA5", "TR5", "CH5", "AA5", "NOI5", "PI5"
+  "SQU", "SIN", "SAW", "TRI", "CHU", "AAH", "NOI",
+  "SQ3", "SI3", "SA3", "TR3", "CH3", "AA3", "NOI3",
+  "SQ5", "SI5", "SA5", "TR5", "CH5", "AA5", "NOI5"
 };
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
