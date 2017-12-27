@@ -1,27 +1,6 @@
 /*  Almost Serious Synth, with - currently - 15 adjustable parameters, and polyphony.
- *  
- *  The setup is mostly inspired by AMSynth. Based on the Mozzi sound synthesis library.
  *
- *  Hardware: - Written for and tested on an STM32F103C8T6 . It should be easy to port to almost any other processor,
- *            as long as that is supported by Mozzi. However, do note that it is simply too much for an 8bit processor,
- *            so not Arduino Uno and friends.
- *            - Uses a 4x4 keypad matrix to select one of the settings (bottom right button to play a random note),
- *            pin connections defined in matrix.h .
- *            - Uses a rotary encoder to adjust the current setting. Connections defined in encoder.h . You can replace
- *            this with simple +/- buttons or a pot - all you will have to do is provide appropriate versions of update_encoder()
- *            and read_encoder() (trivial for buttons).
- *            - Uses a 128*64 pixel SSD1306 display with I2C interface, on the default I2C pins (PB6, PB7). To use a different display,
- *            edit display.h to your liking. However you'll have a hard time making do with any lower resolution.
- *            - MIDI connected on Serial1, i.e. PA9, PA10. So far, only RX is used.
- *            - Audio output on pin PB8 - you can connect a headphone, directly - see Mozzi documentation.
- *  
- *  Synthesizer settings:
- *            - Top row: Envelope - Attack, Decay, Sustain, Release
- *            - Row 2: Wave mixing - Oscillator 1 waveform, Oscillator mix ratio, Oscillator 2 waveform, Oscillator 2 tune, given in half-tones above below Oscillator 1
- *            - Row 3: Low frequency oscillator: Waveform, Frequency, Amplitude (initially set to 0, i.e. disabled), Parameter to modulate
- *            - Bottom 4: Low pass filter: Cutoff frequency, Resonance, Amplitude (initially set to 0, i.e. unfiltered)
- *            - Bottom - right button: Play a random note (very useful for testing during development).
- *  
+ *  See README.md for details and instructions.
  *  
  *
  *  Copyright (c) 2017 Thomas Friedrichsmeier
@@ -56,37 +35,7 @@
 #include <LowPassFilter.h>
 #include <WaveShaper.h>
 
-// The waveforms to use. Note that the wavetables should all be the same size (see TABLE_SIZE define, below)
-// Lower table sizes, help to keep the sketch size small, but are not as pure (which may not even be a bad thing)
-#include <tables/sin2048_int8.h>
-#include <tables/saw2048_int8.h>
-#include <tables/triangle2048_int8.h>
-#include <tables/square_no_alias_2048_int8.h>
-#include <tables/whitenoise8192_int8.h>
-#include <tables/chum9_int8.h>
-#include "aah8192_int8.h"
-#include <tables/pinknoise8192_int8.h>
-#define NUM_TABLES 7
-#define TABLE_SIZE_A 2048
-#define TABLE_SIZE_B 8192
-const int16_t WAVE_TABLE_SIZES[NUM_TABLES] = {TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_B, TABLE_SIZE_B, TABLE_SIZE_B};
-const int8_t* WAVE_TABLES[NUM_TABLES] = {SQUARE_NO_ALIAS_2048_DATA, SIN2048_DATA, SAW2048_DATA, TRIANGLE2048_DATA, CHUM9_DATA, AAH8192_DATA, WHITENOISE8192_DATA};
-const int8_t FREQ_SHIFT[NUM_TABLES] = {0, 0, 0, 0, 8, 8, 0};
-#define IS_NOISE_TABLE(x) (x / NUM_TABLES >= 6)
-
-#include <tables/waveshape_chebyshev_3rd_256_int8.h>
-#include <tables/waveshape_chebyshev_5th_256_int8.h>
-#define NUM_SHAPES 3
-WaveShaper<char> wshape_chebyshev3 (CHEBYSHEV_3RD_256_DATA);
-WaveShaper<char> wshape_chebyshev5 (CHEBYSHEV_5TH_256_DATA);
-WaveShaper<char>* WAVE_SHAPERS[NUM_SHAPES-1] = {&wshape_chebyshev3, &wshape_chebyshev5};
-
-#define NUM_WAVEFORMS (NUM_SHAPES * NUM_TABLES)
-const char* TABLE_NAMES[NUM_WAVEFORMS] = {
-  "SQU", "SIN", "SAW", "TRI", "CHU", "AAH", "NOI",
-  "SQ3", "SI3", "SA3", "TR3", "CH3", "AA3", "NOI3",
-  "SQ5", "SI5", "SA5", "TR5", "CH5", "AA5", "NOI5"
-};
+#include "wavetables.h"
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
 #define NOTECOUNT 12

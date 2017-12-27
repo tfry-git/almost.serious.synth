@@ -6,6 +6,10 @@ The setup is mostly inspired by AMSynth. Based on the Mozzi sound synthesis libr
 - Written for and tested on an STM32F103C8T6 "blue pill". It should be easy to port to almost any other processor / board,
   as long as that is supported by Mozzi. However, do note that it is simply too much for an 8bit processor,
   so not Arduino Uno and friends.
+-- *Note* that this project assumes 128kB available flash (around 70k of that is used at the time of this writing). While the STM32F103C8T6 is
+   officially spec'ed at 64kB flash, (almost) all of these MCUs seem to come with 128kB, actually. _However_, if yours does not, or you
+   do not want to stretch your luck, simply remove some of the wave-tables, or use a lower sampling resolution for the tables to import (for both,
+   just edit wavetables.h).
 - Uses a 4x4 keypad matrix to select one of the settings (bottom right button to play a random note),
   pin connections defined in matrix.h .
 - Uses a rotary encoder to adjust the current setting. Connections defined in encoder.h . You can replace
