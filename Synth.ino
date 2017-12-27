@@ -57,18 +57,22 @@
 #include <WaveShaper.h>
 
 // The waveforms to use. Note that the wavetables should all be the same size (see TABLE_SIZE define, below)
-// Low table sizes (512, here), help to keep the sketch size small, but are not as pure (which may not even be a bad thing)
-#include <tables/sin512_int8.h>
-#include <tables/saw_analogue512_int8.h>
-#include <tables/triangle512_int8.h>
-#include <tables/square_analogue512_int8.h>
+// Lower table sizes, help to keep the sketch size small, but are not as pure (which may not even be a bad thing)
+#include <tables/sin2048_int8.h>
+#include <tables/saw2048_int8.h>
+#include <tables/triangle2048_int8.h>
+#include <tables/square_no_alias_2048_int8.h>
 #include <tables/whitenoise8192_int8.h>
-#define NUM_TABLES 5
-#define TABLE_SIZE_A 512
-//            #error upgrade to 2048
+#include <tables/chum9_int8.h>
+#include "aah8192_int8.h"
+#include <tables/pinknoise8192_int8.h>
+#define NUM_TABLES 7
+#define TABLE_SIZE_A 2048
 #define TABLE_SIZE_B 8192
-const int16_t WAVE_TABLE_SIZES[NUM_TABLES] = {TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_B};
-const int8_t* WAVE_TABLES[NUM_TABLES] = {SQUARE_ANALOGUE512_DATA, SIN512_DATA, SAW_ANALOGUE512_DATA, TRIANGLE512_DATA, WHITENOISE8192_DATA};
+const int16_t WAVE_TABLE_SIZES[NUM_TABLES] = {TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_B, TABLE_SIZE_B, TABLE_SIZE_B};
+const int8_t* WAVE_TABLES[NUM_TABLES] = {SQUARE_NO_ALIAS_2048_DATA, SIN2048_DATA, SAW2048_DATA, TRIANGLE2048_DATA, CHUM9_DATA, AAH8192_DATA, WHITENOISE8192_DATA};
+const int8_t FREQ_SHIFT[NUM_TABLES] = {0, 0, 0, 0, 8, 8, 0, 0};
+#define IS_NOISE_TABLE(x) (x / NUM_TABLES >= 6)
 
 #include <tables/waveshape_chebyshev_3rd_256_int8.h>
 #include <tables/waveshape_chebyshev_5th_256_int8.h>
@@ -79,9 +83,9 @@ WaveShaper<char>* WAVE_SHAPERS[NUM_SHAPES-1] = {&wshape_chebyshev3, &wshape_cheb
 
 #define NUM_WAVEFORMS (NUM_SHAPES * NUM_TABLES)
 const char* TABLE_NAMES[NUM_WAVEFORMS] = {
-  "SQU", "SIN", "SAW", "TRI", "NOI",
-  "SQ3", "SI3", "SA3", "TR3", "NO3",
-  "SQ5", "SI5", "SA5", "TR5", "NO5"
+  "SQU", "SIN", "SAW", "TRI", "CHU", "AAH", "NOI", "PIN",
+  "SQ3", "SI3", "SA3", "TR3", "CH3", "AA3", "NOI3","PI3",
+  "SQ5", "SI5", "SA5", "TR5", "CH5", "AA5", "NOI5", "PI5"
 };
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
@@ -167,27 +171,27 @@ public:
   Oscil<TABLE_SIZE_A, UPDATE_FREQ> oa;
   Oscil<TABLE_SIZE_B, UPDATE_FREQ> ob;
   void setFreq_Q24n8 (Q24n8 freq) {
-    if (a) oa.setFreq_Q24n8 (freq);
-    else ob.setFreq_Q24n8 (freq);
+    if (a) oa.setFreq_Q24n8 (freq >> FREQ_SHIFT[table_num]);
+    else ob.setFreq_Q24n8 (freq >> FREQ_SHIFT[table_num]);
   }
   void setFreq_Q16n16 (Q16n16 freq) {
-    if (a) oa.setFreq_Q16n16 (freq);
-    else ob.setFreq_Q16n16 (freq);
+    if (a) oa.setFreq_Q16n16 (freq >> FREQ_SHIFT[table_num]);
+    else ob.setFreq_Q16n16 (freq >> FREQ_SHIFT[table_num]);
   }
   void setPhase (unsigned int phase) {
     if (a) oa.setPhase (phase);
 //    else ob.setPhase (phase); //No: Setting phase on noise makes the noise less noisy
   }
   void setTableNum (const int8_t num) {
-    int8_t table = num % NUM_TABLES;
+    table_num = num % NUM_TABLES;
     int8_t shape = num / NUM_TABLES;
     shaper = shape ? WAVE_SHAPERS[shape-1] : NULL;
-    if (WAVE_TABLE_SIZES[table] == TABLE_SIZE_B) {
+    if (WAVE_TABLE_SIZES[table_num] == TABLE_SIZE_B) {
       a = false;
-      ob.setTable (WAVE_TABLES[table]);
+      ob.setTable (WAVE_TABLES[table_num]);
     } else {
       a = true;
-      oa.setTable (WAVE_TABLES[table]);
+      oa.setTable (WAVE_TABLES[table_num]);
     }
   }
   int8_t next () {
@@ -203,6 +207,7 @@ public:
     else return TABLE_SIZE_B;
   }
   bool a = true;
+  int8_t table_num = 0;
   WaveShaper<char>* shaper = NULL;
 };
 
@@ -321,7 +326,7 @@ void updateNotes (Note *startnote, uint8_t num_notes) {
     // LPF
     note.lfo_amp = settings[LFOAmpSetting].value;
     note.lfo.setTableNum (settings[LFOWaveFormSetting].value);
-    if ((settings[LFOWaveFormSetting].value % NUM_TABLES) == 4) {
+    if (IS_NOISE_TABLE(settings[LFOWaveFormSetting].value)) {
       // HACK: For LFO, noise waveform is best served _slow_
       note.lfo.setFreq_Q16n16 (((Q16n16) settings[LFOFreqSetting].value << 16) / 10000);
     } else {
