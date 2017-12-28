@@ -1,6 +1,6 @@
 # Almost Serious Synth, with - currently - 15 adjustable parameters, and polyphony.
 
-The setup is mostly inspired by AMSynth. Based on the Mozzi sound synthesis library.
+The setup is mostly inspired by AMSynth (but adds some more complex wave forms). Based on the Mozzi sound synthesis library.
 
 ## Hardware
 - Written for and tested on an STM32F103C8T6 "blue pill". It should be easy to port to almost any other processor / board,

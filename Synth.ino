@@ -109,57 +109,6 @@ Setting settings[SETTINGS_COUNT] = {
 };
 uint8_t current_setting = NothingSetting;
 
-/** Helper class to deal with the fact that not all tables have the same size
- *  (in particular, noise table is 8192 bytes, but including _all_ tables at
- *  that resolution would be prohibitive). Made so it will work -mostly- as a drop-in replacement
- *  to Oscil for the subset of the API we need.
- *
- *  Further, however, it adds simple support for wave-shaping in next() */
-template<uint32_t UPDATE_FREQ> class FlexOscil {
-public:
-  Oscil<TABLE_SIZE_A, UPDATE_FREQ> oa;
-  Oscil<TABLE_SIZE_B, UPDATE_FREQ> ob;
-  void setFreq_Q24n8 (Q24n8 freq) {
-    if (a) oa.setFreq_Q24n8 (freq >> FREQ_SHIFT[table_num]);
-    else ob.setFreq_Q24n8 (freq >> FREQ_SHIFT[table_num]);
-  }
-  void setFreq_Q16n16 (Q16n16 freq) {
-    if (a) oa.setFreq_Q16n16 (freq >> FREQ_SHIFT[table_num]);
-    else ob.setFreq_Q16n16 (freq >> FREQ_SHIFT[table_num]);
-  }
-  void setPhase (unsigned int phase) {
-    if (a) oa.setPhase (phase);
-//    else ob.setPhase (phase); //No: Setting phase on noise makes the noise less noisy
-  }
-  void setTableNum (const int8_t num) {
-    table_num = num % NUM_TABLES;
-    int8_t shape = num / NUM_TABLES;
-    shaper = shape ? WAVE_SHAPERS[shape-1] : NULL;
-    if (WAVE_TABLE_SIZES[table_num] == TABLE_SIZE_B) {
-      a = false;
-      ob.setTable (WAVE_TABLES[table_num]);
-    } else {
-      a = true;
-      oa.setTable (WAVE_TABLES[table_num]);
-    }
-  }
-  int8_t next () {
-    if (!shaper) {
-      if (a) return (oa.next ());
-      else return (ob.next ());
-    }
-    if (a) return (shaper->next (oa.next ()));
-    else return (shaper->next (ob.next ()));
-  }
-  uint32_t tableSize () {
-    if (a) return TABLE_SIZE_A;
-    else return TABLE_SIZE_B;
-  }
-  bool a = true;
-  int8_t table_num = 0;
-  WaveShaper<char>* shaper = NULL;
-};
-
 class Note {
 public:
   byte note; // MIDI note value
