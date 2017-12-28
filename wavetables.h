@@ -14,7 +14,7 @@ Lower table sizes, help to keep the sketch size small, but are not as pure (whic
 #define TABLE_SIZE_B 8192
 const int16_t WAVE_TABLE_SIZES[NUM_TABLES] = {TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_A, TABLE_SIZE_B, TABLE_SIZE_B, TABLE_SIZE_B};
 const int8_t* WAVE_TABLES[NUM_TABLES] = {SQUARE_NO_ALIAS_2048_DATA, SIN2048_DATA, SAW2048_DATA, TRIANGLE2048_DATA, GIT8192_DATA, AAH8192_DATA, WHITENOISE8192_DATA};
-const int8_t FREQ_SHIFT[NUM_TABLES] = {0, 0, 0, 0, 8, 9, 0}; // Some "waveforms" are actually samples that should be played at a much lower rate for the same frequency
+const int8_t FREQ_SHIFT[NUM_TABLES] = {0, 0, 0, 0, 7, 9, 0}; // Some "waveforms" are actually samples that should be played at a much lower rate for the same frequency
 #define IS_NOISE_TABLE(x) (x / NUM_TABLES >= 6)
 
 #include <tables/waveshape_chebyshev_3rd_256_int8.h>
