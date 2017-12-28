@@ -28,10 +28,10 @@ WaveShaper<char>* WAVE_SHAPERS[NUM_SHAPES-1] = {&wshape_chebyshev3, &wshape_cheb
 
 #define NUM_WAVEFORMS (NUM_SHAPES * NUM_TABLES)
 const char* TABLE_NAMES[NUM_WAVEFORMS] = {
-  "Squ", "Sin", "Saw", "Tri", "Chu", "Aah", "Noi",
-  "Sq3", "Si3", "Sa3", "Tr3", "Ch3", "Aa3", "Noi3",
-  "Sq5", "Si5", "Sa5", "Tr5", "Ch5", "Aa5", "Noi5",
-  "Sq/", "Si/", "Sa/", "Tr/", "Ch/", "Aa/", "Noi/"
+  "Squ", "Sin", "Saw", "Tri", "Str", "Aah", "Noi",
+  "Sq3", "Si3", "Sa3", "Tr3", "St3", "Aa3", "Noi3",
+  "Sq5", "Si5", "Sa5", "Tr5", "St5", "Aa5", "Noi5",
+  "Sq/", "Si/", "Sa/", "Tr/", "St/", "Aa/", "Noi/"
 };
 
 
