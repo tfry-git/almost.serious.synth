@@ -22,6 +22,7 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
 
 ## Libraries
 - Requires Mozzi with STM32 support. For the time being, get it from here: https://github.com/tfry-git/Mozzi  (until available in the official Mozzi)
+-- It is recommendable to up the AUDIO_RATE to 32768 in mozzi_config.h
 - Requires the Maple-based STM32 core at https://github.com/rogerclarkmelbourne/Arduino_STM32 *in a very recent version*
 
 ## Synthesizer settings
