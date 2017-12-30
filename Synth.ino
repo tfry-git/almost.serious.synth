@@ -25,6 +25,7 @@
 #include "display.h"
 #include "encoder.h"
 #include "matrix.h"
+#include "storage.h"
 
 #include <MIDI.h>
 #include <MozziGuts.h>
@@ -135,12 +136,36 @@ public:
 };
 Note notes[NOTECOUNT];
 
+void saveVoice () {
+  File f = defaultVoiceSaveHandle ();
+  f.seek (0);
+  int16_t vals[SETTINGS_COUNT];
+  for (int i = 0; i < SETTINGS_COUNT; ++i) {
+    int16_t val = settings[i].value;
+    f.write ((byte) (val >> 8));
+    f.write ((byte) (val & 0xFF));
+  }
+  f.close ();
+}
+
+void loadVoice () {
+  File f = defaultVoiceReadHandle ();
+  byte buf[SETTINGS_COUNT * 2];
+  int len = f.read (buf, SETTINGS_COUNT * 2) / 2;
+  for (int i = 0; i < len; ++i) {
+    settings[i].value = (buf[i*2] << 8) | buf[i*2+1];
+  }
+  f.close ();
+}
+
 #include <EventDelay.h>
 EventDelay noteDelay;
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 void setup() {
   setup_display ();
+  display_detail ("Starting:", "Storage");
+  setup_storage ();
 
   display_detail ("Starting:", "MIDI");
   MIDI.begin();
@@ -163,6 +188,7 @@ void setup() {
   setup_encoder ();
   keypad.init(keyrows, keycols);
 
+  loadVoice ();
   for (uint8_t i = 0; i < SETTINGS_COUNT-1; ++i) {
     drawIconForSetting (i);
   }
@@ -182,6 +208,7 @@ void readSettings() {
       if (noteDelay.ready ()) {
         MyHandleNoteOn (1, rand (20) + 77, 100);
         noteDelay.start ();
+        saveVoice ();
       }
     } else {
       update = update || (current_setting != key);

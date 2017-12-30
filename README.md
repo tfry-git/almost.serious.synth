@@ -6,7 +6,7 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
 - Written for and tested on an STM32F103C8T6 "blue pill". It should be easy to port to almost any other processor / board,
   as long as that is supported by Mozzi. However, do note that it is simply too much for an 8bit processor,
   so not Arduino Uno and friends.
--- *Note* that this project assumes 128kB available flash (around 70k of that is used at the time of this writing). While the STM32F103C8T6 is
+  - *Note* that this project assumes 128kB available flash (around 70k of that is used at the time of this writing). While the STM32F103C8T6 is
    officially spec'ed at 64kB flash, (almost) all of these MCUs seem to come with 128kB, actually. _However_, if yours does not, or you
    do not want to stretch your luck, simply remove some of the wave-tables, or use a lower sampling resolution for the tables to import (for both,
    just edit wavetables.h).
@@ -19,10 +19,12 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
   edit display.h to your liking. However you'll have a hard time making do with any lower resolution.
 - MIDI connected on Serial1, i.e. PA9, PA10. So far, only RX is used.
 - Audio output on pin PB8 - you can connect a headphone, directly - see Mozzi documentation.
+  - Optionally an audio-amp and speaker connected to PB8.
+- An SD card reader is connected on SPI2 (pins PB12(CS) through PB15). Optional.
 
 ## Libraries
 - Requires Mozzi with STM32 support. For the time being, get it from here: https://github.com/tfry-git/Mozzi  (until available in the official Mozzi)
--- It is recommendable to up the AUDIO_RATE to 32768 in mozzi_config.h
+  - It is recommendable to up the AUDIO_RATE to 32768 in mozzi_config.h
 - Requires the Maple-based STM32 core at https://github.com/rogerclarkmelbourne/Arduino_STM32 *in a very recent version*
 
 ## Synthesizer settings
@@ -44,8 +46,14 @@ Not all combinations of waveform / wave-shaping function make a lot of sense, an
 both easy to code, and (I think) easy to understand.
 
 ## Future directions
-I plan to add an SD slot along with the ability to load and save sounds, and to record and play back MIDI sequences.
-There's also some flash and CPU power left to add more effects! The limit currently is the UI / display, really. To add anything more, we'll need more
+For now the Synth will save the latest synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Of course the plan is to offer to store an arbitrary number of
+named voices. Further, I plan to add the ability to record and play back MIDI sequences.
+
+There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
 "pages" of settings, or a larger display.
+
+It may make sense to switch to larger IL9341 based TFT. One popular offering at the time of this writing - while twice the price of an SSD1306 display - sports a 240*320 resolution,
+includes an SD slot _and_ features a touch-screen, which could allow for a pretty intuitive UI. At any rate, the idea is to keep the project mostly modular, so it can be adjusted
+to different hardware, easily.
 
 You're very much invited to contribute! Or as another way to support this project, consider donating via paypal to thomas.friedrichsmeier@gmx.de .
