@@ -32,6 +32,32 @@
 #include <WaveShaper.h>
 #include <EventDelay.h>
 
+void saveVoice ();
+void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
+/** Eventually, this class will handle playback of recorded MIDI. Right now, all it does is playing some random notes. */
+class MIDIPlayer {
+public:
+  void start () {
+    playing = true;
+  }
+  void stop () {
+    playing = false;
+  }
+  void update () {
+    if (!playing) return;
+    if (noteDelay.ready ()) {
+      MyHandleNoteOn (1, rand (20) + 77, 100);
+      noteDelay.start (1000);
+    }
+  }
+  bool isPlaying () const {
+    return playing;
+  }
+private:
+  bool playing = false;
+  EventDelay noteDelay;
+} player;
+
 #include "util.h"
 #include "display.h"
 #include "encoder.h"
@@ -39,12 +65,10 @@
 #include "storage.h"
 #include "wavetables.h"
 #include "synthsettings.h"
-EventDelay noteDelay;
-void saveVoice ();
-void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
 #include "ui.h"
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
+// note slots are also one of the main consumers of RAM.
 #define NOTECOUNT 12
 
 // Rate (Hz) of calling updateControl(), powers of 2 please.
@@ -72,7 +96,7 @@ struct Note {
   FlexOscil<CONTROL_RATE> lfo;
   uint8_t lfo_amp;
   LowPassFilter lpf;
-  uint8_t lpf_cutoff_base;
+  uint8_t lpf_cutoff_base;  // NOTE: If RAM gets really tight, we could remove some of those "base" caches, and utilitize the corresponding current setting value, instead.
   uint8_t lpf_resonance_base;
   uint8_t lpf_amp_base, lpf_amp;
 };
@@ -96,20 +120,18 @@ void setup() {
     notes[i].note = 0;
   }
 
-  noteDelay.set (200);
-  noteDelay.start ();
-
   setup_encoder ();
   setup_keypad ();
 
   loadVoice ();
-  current_page = &synth_settings_page_1;
-  current_page->initDisplay ();
-  display_detail ("Startup", "complete");
+  setCurrentPage(&synth_settings_page_1);
+  menu_page_1p = &menu_page1;
+  player.start ();
 
 //  randSeed(); -- hangs?!
   display_detail ("Starting:", "Mozzi");
   startMozzi(CONTROL_RATE);
+  display_detail ("Startup", "complete");
 }
 
 // Update parameters of the given notes. Usually either called with a single note, or all notes at once.
@@ -146,6 +168,7 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
 
 void updateControl(){
   MIDI.read();
+  player.update ();
 
   current_page->handleButton (keypad.read ());
   current_page->handleEnc (read_encoder ());

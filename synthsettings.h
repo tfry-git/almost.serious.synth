@@ -1,11 +1,13 @@
 #ifndef SYNTHSETTINGS_H
 #define SYNTHSETTINGS_H
 
+#include "wavetables.h"
+
 struct Setting {
   const char* name;
   const char* shortname;
   int16_t min, value, max;
-  int16_t dynamic_res;
+  const int16_t dynamic_res;
   const char** value_labels;
   const char* displayValue() {
     if (value_labels) {

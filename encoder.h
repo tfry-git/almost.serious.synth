@@ -73,9 +73,12 @@ void update_encoder () {
 }
 
 int8_t read_encoder () {
-  int ret = encoder_micro_tick / 4;
+  int8_t ret = encoder_micro_tick / 4;
   if (ret != 0) {
-      encoder_micro_tick -= ret * 4;
+    encoder_micro_tick = 0;
+    // TODO: What the??? Somehow the version below will cause audible clicks, even while the encoder is not turning at all.
+    // In practice, the line above, while not quite correct, will not be noticeably different.
+//      encoder_micro_tick -= ret * 4;
   }
   return ret;
 }

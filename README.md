@@ -27,12 +27,26 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
   - It is recommendable to up the AUDIO_RATE to 32768 in mozzi_config.h
 - Requires the Maple-based STM32 core at https://github.com/rogerclarkmelbourne/Arduino_STM32 *in a very recent version*
 
+## Usage / UI
+At the time of this writing, the UI consist of two pages, one for the Synthesizer settings, one for the "main menu". Both are laid out in a logical
+4 by 4 matrix, corresponding to the buttons of the keypad. So, to select the setting / activate the option in row 2, colum 3, you press the button in
+row 2, column 3, etc.
+
+For the time being, when starting, the Synth will play radom notes, which is pretty useful during development. To turn this off, go the main menu, and select
+"Stop" (row 3, column 2).
+
 ## Synthesizer settings
 - Top row: Envelope - Attack, Decay, Sustain, Release
 - Row 2: Wave mixing - Oscillator 1 waveform, Oscillator mix ratio, Oscillator 2 waveform, Oscillator 2 tune, given in half-tones above below Oscillator 1
 - Row 3: Low frequency oscillator: Waveform, Frequency, Amplitude (initially set to 0, i.e. disabled), Parameter to modulate
 - Bottom 4: Low pass filter: Cutoff frequency, Resonance, Amplitude (initially set to 0, i.e. unfiltered)
-- Bottom - right button: Play a random note (very useful for testing during development).
+- Bottom - right button: Exit to main menu
+
+## Main menu
+- Top row: This is just a caption for Synthesizer options in  the next row
+- Row 2: "Edit" -> Go to the synthesizer settings page; "Save"/"Load" -> Save / load current voice to/from SD card
+- Row 3: Caption for the MIDI related options in the next row
+- Row 4: "Rec/Stop" -> Start / end recording MIDI from MIDI in; "Play/Stop" -> Play / stop playing the current MIDI sequence; "Save"/"Load" -> Save / load MIDI track to/from SD card
 
 ## Waveforms
 One of the things that may not be self-explanatory is probably the waveforms. First, there are the usual "basic" waveforms square ("Squ"), sine ("Sin"), saw / ramp ("Saw"),
@@ -46,7 +60,7 @@ Not all combinations of waveform / wave-shaping function make a lot of sense, an
 both easy to code, and (I think) easy to understand.
 
 ## Future directions
-For now the Synth will save the latest synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Of course the plan is to offer to store an arbitrary number of
+For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Of course the plan is to offer to store an arbitrary number of
 named voices. Further, I plan to add the ability to record and play back MIDI sequences.
 
 There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
