@@ -1,3 +1,6 @@
+#ifndef WAVETABLES_H
+#define WAVETABLES_H
+
 /* The waveforms to use. Note that for the time being, we support exactly two distinct table sizes (TABLE_SIZE_A, TABLE_SIZE_B).
 Lower table sizes, help to keep the sketch size small, but are not as pure (which may not even be a bad thing)
 */
@@ -88,4 +91,6 @@ public:
   int8_t table_num = 0;
   WaveShaper<char>* shaper = NULL;
 };
+
+#endif
 

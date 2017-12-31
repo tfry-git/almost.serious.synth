@@ -22,11 +22,6 @@
 #error Sorry: It would not be too hard to get this sketch to compile for an 8bit processor, but it's way too complex for a tiny AVR. Written for and tested on an STM32F103C8T6, so no expensive hardware required.
 #endif
 
-#include "display.h"
-#include "encoder.h"
-#include "matrix.h"
-#include "storage.h"
-
 #include <MIDI.h>
 #include <MozziGuts.h>
 #include <Oscil.h>
@@ -35,8 +30,19 @@
 #include <ADSR.h>
 #include <LowPassFilter.h>
 #include <WaveShaper.h>
+#include <EventDelay.h>
 
+#include "util.h"
+#include "display.h"
+#include "encoder.h"
+#include "matrix.h"
+#include "storage.h"
 #include "wavetables.h"
+#include "synthsettings.h"
+EventDelay noteDelay;
+void saveVoice ();
+void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
+#include "ui.h"
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
 #define NOTECOUNT 12
@@ -47,71 +53,7 @@
 #define CONTROL_RATE_MULT 10
 uint8_t control_loop_num;
 
-char printf_buf[8]; // Hackish buffer for use in Setting::displayValue()
-
-struct Setting {
-  const char* name;
-  const char* shortname;
-  int16_t min, value, max;
-  int16_t dynamic_res;
-  const char** value_labels;
-  const char* displayValue() {
-    if (value_labels) {
-      return value_labels[value];
-    }
-    cheap_itoa (printf_buf, value, 5);
-    return printf_buf;
-  }
-};
-
-// The point of this enum is to provide readable names for the various inputs.
-// For the mapping of analog pins to parameter, see the function readSettings(), further below.
-enum Settings {
-  AttackSetting,
-  DecaySetting,
-  SustainSetting,
-  ReleaseSetting,
-
-  Osc1WaveFormSetting,
-  OscMixSetting,
-  Osc2WaveFormSetting,
-  Osc2FreqSetting,
-
-  LFOWaveFormSetting,
-  LFOFreqSetting,
-  LFOAmpSetting,
-  LFOEffectSetting,
-
-  LPFCutoffSetting,
-  LPFResonanceSetting,
-  LPFAmpSetting,
-  NothingSetting,
-
-  SETTINGS_COUNT
-};
-const char* EFFECTS[] = {"LPFC", "LPFR", "LPFA", "OMix", "O1Fr", "Freq"};
-Setting settings[SETTINGS_COUNT] = {
-  {"Attack (ms)", "A", 0, 100, 10000, 5, NULL},
-  {"Decay (ms)", "D", 0, 100, 10000, 5, NULL},
-  {"Sustain (ms) ", "S", 0, 2000, 10000, 5, NULL},
-  {"Release (ms)", "R", 0, 100, 10000, 5, NULL},
-  {"Osc1 Waveform", "W", 0, 1, NUM_WAVEFORMS-1, 100, TABLE_NAMES},
-  {"Osc Mix", "X", 0, 100, 255, 10, NULL},
-  {"Osc2 Waveform", "W", 0, 1, NUM_WAVEFORMS-1, 100, TABLE_NAMES},
-  {"Osc2 Tune halfst.", "T", -40, 0, 40, 100, NULL},
-  {"LFO Waveform", "W", 0, 1, NUM_WAVEFORMS-1, 100, TABLE_NAMES},
-  {"LF0 Freq * 200", "F", 1, 200, 16000, 5, NULL},
-  {"LF0 Amp", "A", 0, 0, 255, 10, NULL},
-  {"LF0 Effect", "X", 0, 0, 5, 100, EFFECTS },
-  {"LPF Cutoff Freq", "C", 0, 100, 255, 10, NULL},
-  {"LPF Resonance", "R", 0, 50, 170, 5, NULL},
-  {"LPF Amp", "A", 0, 0, 255, 10, NULL},
-  {"Nothing", "-", 0, 0, 255, 10, NULL}
-};
-uint8_t current_setting = NothingSetting;
-
-class Note {
-public:
+struct Note {
   byte note; // MIDI note value
   int8_t velocity;
   ADSR<CONTROL_RATE, CONTROL_RATE> env;
@@ -136,30 +78,6 @@ public:
 };
 Note notes[NOTECOUNT];
 
-void saveVoice () {
-  File f = defaultVoiceSaveHandle ();
-  f.seek (0);
-  int16_t vals[SETTINGS_COUNT];
-  for (int i = 0; i < SETTINGS_COUNT; ++i) {
-    int16_t val = settings[i].value;
-    f.write ((byte) (val >> 8));
-    f.write ((byte) (val & 0xFF));
-  }
-  f.close ();
-}
-
-void loadVoice () {
-  File f = defaultVoiceReadHandle ();
-  byte buf[SETTINGS_COUNT * 2];
-  int len = f.read (buf, SETTINGS_COUNT * 2) / 2;
-  for (int i = 0; i < len; ++i) {
-    settings[i].value = (buf[i*2] << 8) | buf[i*2+1];
-  }
-  f.close ();
-}
-
-#include <EventDelay.h>
-EventDelay noteDelay;
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 void setup() {
@@ -177,64 +95,25 @@ void setup() {
     notes[i].env.setSustainTime(1000);
     notes[i].note = 0;
   }
-  current_setting = 0;
 
   noteDelay.set (200);
   noteDelay.start ();
 
+  setup_encoder ();
+  setup_keypad ();
+
+  loadVoice ();
+  current_page = &synth_settings_page_1;
+  current_page->initDisplay ();
+  display_detail ("Startup", "complete");
+
 //  randSeed(); -- hangs?!
   display_detail ("Starting:", "Mozzi");
   startMozzi(CONTROL_RATE);
-  setup_encoder ();
-  keypad.init(keyrows, keycols);
-
-  loadVoice ();
-  for (uint8_t i = 0; i < SETTINGS_COUNT-1; ++i) {
-    drawIconForSetting (i);
-  }
-  display_detail ("Startup", "complete");
-}
-
-void drawIconForSetting (uint8_t setting) {
-    display_icon (setting / 4, setting % 4, settings[setting].shortname, settings[setting].displayValue());
-}
-
-void readSettings() {
-  bool update = false;
-
-  int key = keypad.read ();
-  if (key >= 0) {
-    if (key == NothingSetting) {
-      if (noteDelay.ready ()) {
-        MyHandleNoteOn (1, rand (20) + 77, 100);
-        noteDelay.start ();
-        saveVoice ();
-      }
-    } else {
-      update = update || (current_setting != key);
-      current_setting = key;
-    }
-  }
-
-  Setting &setting = settings[current_setting];
-
-  int8_t res = read_encoder ();
-  if (res != 0) {
-    update = true;
-    int mult = setting.value / setting.dynamic_res + 1;
-    setting.value += res * mult;
-    if (setting.value < setting.min) setting.value = setting.min;
-    if (setting.value > setting.max) setting.value = setting.max;
-  }
-
-  if (update) {
-    drawIconForSetting (current_setting);
-    display_detail(setting.name, setting.displayValue());
-  }
 }
 
 // Update parameters of the given notes. Usually either called with a single note, or all notes at once.
-void updateNotes (Note *startnote, uint8_t num_notes) {
+void updateNotes (class Note *startnote, uint8_t num_notes) {
   for (uint8_t i = 0; i < num_notes; ++i) {
     Note &note = startnote[i];
     note.env.setAttackTime(settings[AttackSetting].value);
@@ -265,16 +144,12 @@ void updateNotes (Note *startnote, uint8_t num_notes) {
   }
 }
 
-uint8_t u8ranged (int input) {
-  if (input < 0) return 0;
-  if (input > 255) return 255;
-  return input;
-}
-
 void updateControl(){
   MIDI.read();
 
-  readSettings ();
+  current_page->handleButton (keypad.read ());
+  current_page->handleEnc (read_encoder ());
+  current_page->updateDisplay ();
 
   // If you enable the line below, here (and disable the corresponding line in MyHandleNoteOn(), notes _already playing_ will be affected by pot settings.
   // Of course, updating more often means more more CPU load. You may have to reduce the NOTECOUNT.

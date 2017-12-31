@@ -1,3 +1,6 @@
+#ifndef ENCODER_H
+#define ENCODER_H
+
 /* Reading from a rotary encoder, with software debouncing */
 
 // Input pins. NOTE That these _must_ support intterupts, _and_ interrupts must not interfere with other pins
@@ -85,3 +88,6 @@ void setup_encoder() {
   pin_a_change_time = pin_b_change_time = last_handled_change_time = millis ();
   encoder_micro_tick = 0;
 }
+
+#endif
+

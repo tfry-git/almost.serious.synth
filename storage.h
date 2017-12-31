@@ -1,3 +1,8 @@
+#ifndef STORAGE_H
+#define STORAGE_H
+
+/** Simple abstraction layer around the permanent storage device (if any) */
+
 #include <SD.h>
 File root;
 
@@ -20,4 +25,6 @@ File defaultVoiceReadHandle () {
 File defaultVoiceSaveHandle () {
   return SD.open(VOICES_DIRECTORY "/0.voc", FILE_WRITE);
 }
+
+#endif
 

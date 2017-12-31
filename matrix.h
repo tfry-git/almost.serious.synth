@@ -1,3 +1,6 @@
+#ifndef MATRIX_H
+#define MATRIX_H
+
 /* Read from a button matrix
  *  Adjustable pin definitions at the bottom of this file. */
 template<uint8_t ROWS, uint8_t COLS> class KeypadMatrix {
@@ -49,8 +52,13 @@ private:
     uint8_t *colpins;
 };
 
-KeypadMatrix<4,4> keypad;
-uint8_t keyrows[4] = {PA7,PA6,PA5,PA4};  // for some strange reason, I had a _lot_ of noise on PA11 on my board. Perhaps related to I2C on PB11?
-uint8_t keycols[4] = {PB11,PB10,PB1,PB0};
 
+KeypadMatrix<4,4> keypad;
+  uint8_t keyrows[4] = {PA7,PA6,PA5,PA4};  // for some strange reason, I had a _lot_ of noise on PA11 on my board. Perhaps related to I2C on PB11?
+  uint8_t keycols[4] = {PB11,PB10,PB1,PB0};
+void setup_keypad () {
+  keypad.init (keyrows, keycols);
+}
+
+#endif
 
