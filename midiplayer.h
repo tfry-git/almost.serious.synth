@@ -18,6 +18,7 @@ public:
   
   void playRandom () {
       stop ();
+//      randSeed (mozziMicros ());  -- hangs?!
       state = PlayingRandom;
   }
   void stop () {
@@ -77,6 +78,7 @@ public:
             // default: fail, silently... TODO implement more events
           }
 
+          if (!io.available ()) break;
           event_time += readLong ();
         }
       } else {

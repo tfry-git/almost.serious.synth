@@ -106,9 +106,8 @@ void setup() {
   loadVoice ();
   setCurrentPage(&synth_settings_page_1);
   menu_page_1p = &menu_page1;
-  player.playRandom ();
+  player.play ();
 
-//  randSeed(); -- hangs?!
   display_detail ("Starting:", "Mozzi");
   startMozzi(CONTROL_RATE);
   display_detail ("Startup", "complete");
@@ -146,7 +145,7 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
   }
 }
 
-void updateControl(){
+void updateControl() {
   player.update ();
 
   current_page->handleButton (keypad.read ());
@@ -190,6 +189,7 @@ int updateAudio(){
   int ret = 0;
   for (byte i = 0; i < NOTECOUNT; ++i) {
     Note &note = notes[i];
+    if (!note.isPlaying ()) continue;
     // Step 1: Mix waveforms
     int8_t unfiltered = ((int32_t) note.oscil2.next() * note.osc2_mag + (int32_t) note.oscil.next() * (255u - note.osc2_mag)) >> 8; // LPF filter only takes 8 bits as input
     // Step 2: Apply lowpass
@@ -206,28 +206,39 @@ void loop(){
 
 void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
   if (velocity > 0) {
+    // Find a suitable slot for the new note. If it is the same pitch as an existing note, use that, otherwise pick a fresh slot.
+    byte candidate = NOTECOUNT;
     for (byte i = 0; i < NOTECOUNT; ++i) {
-      if (!notes[i].isPlaying ()) {
-        Note &note = notes[i];
-        note.note = pitch;
-
-        // Initialize current note with current parameters. Depending on your taste and usecase, you may want to disable this, and enable the corresponding line
-        // inside updateControl(), instead.
-        updateNotes(&note, 1);
-
-        note.osc1_f_base = Q16n16_mtof (pitch << 16);
-        note.oscil.setPhase (0); // Make sure oscil1 and oscil2 start in sync
-        note.oscil.setFreq_Q24n8 (Q16n16_to_Q24n8 (note.osc1_f_base));
-        note.env.noteOn();
-        note.velocity = velocity;
-
-        // LPF
-        note.lfo.setPhase (note.lfo.tableSize () / 4); // 90 degree into table; since the LFO is oscillating _slow_, we cannot afford a random starting point */
-
-        // Wave mixing
-        note.oscil2.setPhase (0);
+      Note &note = notes[i];
+      if (note.note == pitch) { // found same note already playing on the same pitch: Use that
+        candidate = i;
         break;
       }
+      if (!note.isPlaying ()) {
+        candidate = i;
+      }
+    }
+    if (candidate >= NOTECOUNT) return;
+
+    Note &note = notes[candidate];
+    if (note.note == pitch || !note.isPlaying ()) {
+      note.note = pitch;
+
+      // Initialize current note with current parameters. Depending on your taste and usecase, you may want to disable this, and enable the corresponding line
+      // inside updateControl(), instead.
+      updateNotes(&note, 1);
+
+      note.osc1_f_base = Q16n16_mtof (pitch << 16);
+      note.oscil.setPhase (0); // Make sure oscil1 and oscil2 start in sync
+      note.oscil.setFreq_Q24n8 (Q16n16_to_Q24n8 (note.osc1_f_base));
+      note.env.noteOn();
+      note.velocity = velocity;
+
+      // LPF
+      note.lfo.setPhase (note.lfo.tableSize () / 4); // 90 degree into table; since the LFO is oscillating _slow_, we cannot afford a random starting point */
+
+      // Wave mixing
+      note.oscil2.setPhase (0);
     }
   } else {
     MyHandleNoteOff (channel, pitch, velocity);
@@ -240,7 +251,7 @@ void MyHandleNoteOff(byte channel, byte pitch, byte velocity) {
       if (!notes[i].isPlaying ()) continue;
       notes[i].env.noteOff ();
       notes[i].note = 0;
-      //break; Continue the search. We might actually have two instances of the same note playing/decaying at the same time.
+      break;
     }
   }
 }

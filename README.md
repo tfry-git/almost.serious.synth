@@ -59,9 +59,11 @@ Chebyshev 5th order (suffix "5"), and simoid (suffix "/").
 Not all combinations of waveform / wave-shaping function make a lot of sense, and not all waveforms make sense e.g. when used for the LFO. However, the current setup was
 both easy to code, and (I think) easy to understand.
 
-## Issues
-- Many things not implemented
-- _After_ playing back recorded MIDI, the Synth will start clicking. Something going on with the SD card, I suppose, but what?
+## Limitations and notes
+- The Synth is - technically - 12 note polyphnic by default (easily adjustable via a compile time define), but when really playing 12 simultaneous notes, and in particular when playing
+  many simultaneous notes via some of the more CPU intensive effects enabled (such as Frequency modulation), you may start hearing "clicks" in the audio output, corresponding to
+  buffer underruns.
+  - Preliminary debugging suggests the bottleneck is in updateAudio()
 
 ## Future directions
 For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Similarly, you can record and playback exactly one
