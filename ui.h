@@ -89,8 +89,7 @@ public:
     drawMenuOption ("Save", 1, 2);
     drawMenuOption ("Load", 1, 3);
     display_header_bar ("MIDI", 2);
-    drawMenuOption ("Rec", 3, 0);
-    drawMIDIPlayOption ();
+    drawMIDIPlayOptions ();
     drawMenuOption ("Save", 3, 2);
     drawMenuOption ("Load", 3, 3);
 //    display_detail ("I am a placeholder", "");
@@ -115,15 +114,25 @@ public:
       case 13:
         if (player.isPlaying ()) {
           player.stop ();
-          drawMIDIPlayOption ();
+          drawMIDIPlayOptions ();
           display_detail ("Playback", "stopped");
         } else {
-          player.start ();
-          drawMIDIPlayOption ();
+          player.play ();
+          drawMIDIPlayOptions ();
           display_detail ("Random notes, for now...", "");
         }
         break;
       case 12:
+        if (player.isRecording ()) {
+          player.stop ();
+          drawMIDIPlayOptions ();
+          display_detail ("Recording", "stopped");
+        } else {
+          player.record ();
+          drawMIDIPlayOptions ();
+          display_detail ("Recording", "started");
+        }
+        break;
       case 14:
       case 15:
         display_detail ("Not yet implemented", ":-(");
@@ -133,11 +142,16 @@ public:
     // Not needed
   }
 private:
-  void drawMIDIPlayOption () {
+  void drawMIDIPlayOptions () {
     if (player.isPlaying ()) {
       drawMenuOption ("Stop", 3, 1);
     } else {
       drawMenuOption ("Play", 3, 1);
+    }
+    if (player.isRecording ()) {
+      drawMenuOption ("Stop", 3, 0);
+    } else {
+      drawMenuOption ("Rec", 3, 0);
     }
   }
 };

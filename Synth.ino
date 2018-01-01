@@ -19,7 +19,7 @@
  */
 
 #if defined(__AVR__)
-#error Sorry: It would not be too hard to get this sketch to compile for an 8bit processor, but it's way too complex for a tiny AVR. Written for and tested on an STM32F103C8T6, so no expensive hardware required.
+#error Sorry: It would not be too hard to get this sketch to compile for an 8bit processor, but it is way too complex for a tiny AVR. Written for and tested on an STM32F103C8T6, so no expensive hardware required.
 #endif
 
 #include <MIDI.h>
@@ -34,29 +34,7 @@
 
 void saveVoice ();
 void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
-/** Eventually, this class will handle playback of recorded MIDI. Right now, all it does is playing some random notes. */
-class MIDIPlayer {
-public:
-  void start () {
-    playing = true;
-  }
-  void stop () {
-    playing = false;
-  }
-  void update () {
-    if (!playing) return;
-    if (noteDelay.ready ()) {
-      MyHandleNoteOn (1, rand (20) + 77, 100);
-      noteDelay.start (1000);
-    }
-  }
-  bool isPlaying () const {
-    return playing;
-  }
-private:
-  bool playing = false;
-  EventDelay noteDelay;
-} player;
+void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 
 #include "util.h"
 #include "display.h"
@@ -65,6 +43,9 @@ private:
 #include "storage.h"
 #include "wavetables.h"
 #include "synthsettings.h"
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+#include "midiplayer.h"
+MIDIPlayer player;
 #include "ui.h"
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
@@ -102,8 +83,6 @@ struct Note {
 };
 Note notes[NOTECOUNT];
 
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
-
 void setup() {
   setup_display ();
   display_detail ("Starting:", "Storage");
@@ -123,10 +102,11 @@ void setup() {
   setup_encoder ();
   setup_keypad ();
 
+  display_detail ("Loading:", "Settings");
   loadVoice ();
   setCurrentPage(&synth_settings_page_1);
   menu_page_1p = &menu_page1;
-  player.start ();
+  player.playRandom ();
 
 //  randSeed(); -- hangs?!
   display_detail ("Starting:", "Mozzi");
@@ -167,7 +147,6 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
 }
 
 void updateControl(){
-  MIDI.read();
   player.update ();
 
   current_page->handleButton (keypad.read ());

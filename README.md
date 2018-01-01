@@ -1,4 +1,4 @@
-# Almost Serious Synth, with - currently - 15 adjustable parameters, and polyphony.
+# Almost Serious Synth, with - currently - 15 adjustable parameters, MIDI recording, and polyphony.
 
 The setup is mostly inspired by AMSynth (but adds some more complex wave forms). Based on the Mozzi sound synthesis library.
 
@@ -32,8 +32,8 @@ At the time of this writing, the UI consist of two pages, one for the Synthesize
 4 by 4 matrix, corresponding to the buttons of the keypad. So, to select the setting / activate the option in row 2, colum 3, you press the button in
 row 2, column 3, etc.
 
-For the time being, when starting, the Synth will play radom notes, which is pretty useful during development. To turn this off, go the main menu, and select
-"Stop" (row 3, column 2).
+For the time being, when starting, the Synth will play the latest MIDI recording (if any), followed by random notes, which is pretty useful during development. To turn this off,
+go the main menu, and select "Stop" (row 3, column 2).
 
 ## Synthesizer settings
 - Top row: Envelope - Attack, Decay, Sustain, Release
@@ -59,9 +59,13 @@ Chebyshev 5th order (suffix "5"), and simoid (suffix "/").
 Not all combinations of waveform / wave-shaping function make a lot of sense, and not all waveforms make sense e.g. when used for the LFO. However, the current setup was
 both easy to code, and (I think) easy to understand.
 
+## Issues
+- Many things not implemented
+- _After_ playing back recorded MIDI, the Synth will start clicking. Something going on with the SD card, I suppose, but what?
+
 ## Future directions
-For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Of course the plan is to offer to store an arbitrary number of
-named voices. Further, I plan to add the ability to record and play back MIDI sequences.
+For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Similarly, you can record and playback exactly one
+MIDI sequence ("/MIDI/0.mid"). Of course the plan is to offer to store an arbitrary number of named voices / sequences.
 
 There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
 "pages" of settings, or a larger display.
