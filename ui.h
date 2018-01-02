@@ -21,9 +21,9 @@ UIPage *menu_page_1p;  // Dirty HACK, TODO remove this.
 
 void setCurrentPage (UIPage *newpage) {
   current_page = newpage;
-  display.clearDisplay ();
+  display_clear();
   newpage->initDisplay();
-  display.display();
+  display_commit();
 }
 
 /** UI specification for the (a) synthesizer settings screen. In essence, button

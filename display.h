@@ -15,6 +15,14 @@ Adafruit_SSD1306 display(OLED_RESET);
 #define SECTION_HEIGHT 13
 #define FONT_SPACING 6
 
+void display_clear() {
+    display.clearDisplay();
+}
+
+void display_commit() {
+    display.display();
+}
+
 void display_icon(int8_t row, int8_t col, const char *shortname, const char* value, bool active) {
     display.fillRect(col*SECTION_WIDTH-FONT_SPACING, row*SECTION_HEIGHT, SECTION_WIDTH, SECTION_HEIGHT, active ? 1 : 0);
     display.setTextSize(1);
