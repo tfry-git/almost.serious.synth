@@ -50,8 +50,8 @@ public:
     if (state == Stopped) return;
 
     if (state == Playing) {
+      uint32_t now = nowTime();
       if (io.available()) {
-        uint32_t now = nowTime();
         while (event_time <= now) {
           byte buf[4];
           byte in;
@@ -82,7 +82,12 @@ public:
           event_time += readLong ();
         }
       } else {
-        playRandom ();
+        if (io.size () > 0) { // Loop, unless there is no file to play.
+          io.seek (0);
+          event_time = now + 1000 + readLong ();
+        } else {
+          playRandom ();
+        }
       }
     }
     

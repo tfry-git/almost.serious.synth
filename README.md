@@ -10,7 +10,7 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
    officially spec'ed at 64kB flash, (almost) all of these MCUs seem to come with 128kB, actually. _However_, if yours does not, or you
    do not want to stretch your luck, simply remove some of the wave-tables, or use a lower sampling resolution for the tables to import (for both,
    just edit wavetables.h).
-- Uses a 4x4 keypad matrix to select one of the settings (bottom right button to play a random note),
+- Uses a 4x4 keypad matrix to select one of the settings (bottom right button to exit to "menu"),
   pin connections defined in matrix.h .
 - Uses a single potentiometer (or joystick) to adjust the current setting up / down. _Alternatively_, you can also use a rotary encoder, by adjusting
   just a few defines in userinput.h.
@@ -33,7 +33,7 @@ At the time of this writing, the UI consist of two pages, one for the Synthesize
 4 by 4 matrix, corresponding to the buttons of the keypad. So, to select the setting / activate the option in row 2, colum 3, you press the button in
 row 2, column 3, etc.
 
-For the time being, when starting, the Synth will play the latest MIDI recording (if any), followed by random notes, which is pretty useful during development. To turn this off,
+For the time being, when starting, the Synth will play the latest MIDI recording (if any, random notes, otherwise), which is pretty useful during development. To turn this off,
 go the main menu, and select "Stop" (row 3, column 2).
 
 ## Synthesizer settings
@@ -65,6 +65,8 @@ both easy to code, and (I think) easy to understand.
   many simultaneous notes via some of the more CPU intensive effects enabled (such as Frequency modulation), you may start hearing "clicks" in the audio output, corresponding to
   buffer underruns.
   - Preliminary debugging suggests the bottleneck is in updateAudio()
+- While adjusting settings or navigating the menu, audio will be severely disrupted. This is due to the fact that the I2C communication used with the display is synchronous (i.e. blocking).
+- This is all a work in progess. Some things _will_ break with an update, but I'll try not to break things, badly.
 
 ## Future directions
 For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Similarly, you can record and playback exactly one
