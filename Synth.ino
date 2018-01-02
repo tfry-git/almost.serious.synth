@@ -54,9 +54,6 @@ MIDIPlayer player;
 
 // Rate (Hz) of calling updateControl(), powers of 2 please.
 #define CONTROL_RATE 128
-// Actually, we're calling control rate four times as often, but omitting most expensive stuff.
-#define CONTROL_RATE_MULT 10
-uint8_t control_loop_num;
 
 struct Note {
   byte note; // MIDI note value
@@ -184,8 +181,6 @@ void updateControl() {
 }
 
 int updateAudio(){
-  if (!(++control_loop_num % CONTROL_RATE_MULT)) update_encoder ();
-
   int ret = 0;
   for (byte i = 0; i < NOTECOUNT; ++i) {
     Note &note = notes[i];
@@ -202,6 +197,9 @@ int updateAudio(){
 
 void loop(){
   audioHook(); // required here
+#if defined (HIGH_FREQUENCY_HOOK)
+  HIGH_FREQUENCY_HOOK();
+#endif
 }
 
 void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {

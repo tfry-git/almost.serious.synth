@@ -9,6 +9,9 @@
 #define ENCODER_PIN_B PA2
 #define BOUNCE_TIMEOUT 2  // ms
 
+// Encoder needs to check for updates more frequently than control rate.
+#define HIGH_FREQUENCY_HOOK update_encoder
+
 volatile uint16_t pin_a_change_time;
 volatile uint16_t pin_b_change_time;
 volatile bool encoder_change_pending;
