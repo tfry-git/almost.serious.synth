@@ -38,7 +38,7 @@ void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 
 #include "util.h"
 #include "display.h"
-#include "encoder.h"
+#include "userinput.h"
 #include "matrix.h"
 #include "storage.h"
 #include "wavetables.h"
@@ -96,7 +96,7 @@ void setup() {
     notes[i].note = 0;
   }
 
-  setup_encoder ();
+  setup_updown ();
   setup_keypad ();
 
   display_detail ("Loading:", "Settings");
@@ -146,7 +146,7 @@ void updateControl() {
   player.update ();
 
   current_page->handleButton (keypad.read ());
-  current_page->handleEnc (read_encoder ());
+  current_page->handleUpDown (read_updown ());
   current_page->updateDisplay ();
 
   // If you enable the line below, here (and disable the corresponding line in MyHandleNoteOn(), notes _already playing_ will be affected by pot settings.

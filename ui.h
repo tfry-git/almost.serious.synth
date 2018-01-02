@@ -8,7 +8,7 @@
 class UIPage {
 public:
   virtual void initDisplay () = 0;             /// intialize the display. To be called, when the page has just been activated.
-  virtual void handleEnc (int8_t delta) = 0;   /// handle encoder input (+/-)
+  virtual void handleUpDown (int8_t delta) = 0;   /// handle encoder input (+/-)
   virtual void handleButton (int8_t but) = 0;  /// handle button (matrix) press
   virtual void updateDisplay () = 0;           /// update display (if necessary)
 protected:
@@ -43,11 +43,11 @@ class SynthSettingsPage : public UIPage {
     }
   }
 
-  void handleEnc (int8_t delta) override {
+  void handleUpDown (int8_t delta) override {
     if (delta != 0) {
       Setting& setting = settings[current_setting];
       update = true;
-      int mult = setting.value / setting.dynamic_res + 1;
+      int mult = ((setting.value / setting.dynamic_res) >> USER_INPUT_HIGHER_RES) + 1;
       setting.value += delta * mult;
       if (setting.value < setting.min) setting.value = setting.min;
       if (setting.value > setting.max) setting.value = setting.max;
@@ -94,7 +94,7 @@ public:
     drawMenuOption ("Load", 3, 3);
 //    display_detail ("I am a placeholder", "");
   }
-  void handleEnc (int8_t delta) override {
+  void handleUpDown (int8_t delta) override {
     // TODO: scrolling (once necessary)
   }
   void handleButton (int8_t but) {

@@ -3,11 +3,9 @@
 
 /* Reading from a rotary encoder, with software debouncing */
 
-// Input pins. NOTE That these _must_ support intterupts, _and_ interrupts must not interfere with other pins
-// (e.g. on STM32F103C8T6, PAx will interfere with PBx)
-#define ENCODER_PIN_A PA1
-#define ENCODER_PIN_B PA2
-#define BOUNCE_TIMEOUT 2  // ms
+#ifndef (ENCODER_AS_TUNER)
+#error This file to be included from userinput.h, only.
+#endif
 
 // Encoder needs to check for updates more frequently than control rate.
 #define HIGH_FREQUENCY_HOOK update_encoder

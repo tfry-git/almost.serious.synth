@@ -12,9 +12,10 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
    just edit wavetables.h).
 - Uses a 4x4 keypad matrix to select one of the settings (bottom right button to play a random note),
   pin connections defined in matrix.h .
-- Uses a rotary encoder to adjust the current setting. Connections defined in encoder.h . You can replace
-  this with simple +/- buttons or a pot - all you will have to do is provide appropriate versions of update_encoder()
-  and read_encoder() (trivial for buttons).
+- Uses a single potentiometer (or joystick) to adjust the current setting up / down. _Alternatively_, you can also use a rotary encoder, by adjusting
+  just a few defines in userinput.h.
+  - You could replace also this with simple +/- buttons - all you will have to do is provide appropriate versions of setup_updown() and read_updown()
+  (trivial for buttons).
 - Uses a 128*64 pixel SSD1306 display with I2C interface, on the default I2C pins (PB6, PB7). To use a different display,
   edit display.h to your liking. However you'll have a hard time making do with any lower resolution.
 - MIDI connected on Serial1, i.e. PA9, PA10. So far, only RX is used.
