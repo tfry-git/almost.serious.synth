@@ -11,9 +11,9 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
    do not want to stretch your luck, simply remove some of the wave-tables, or use a lower sampling resolution for the tables to import (for both,
    just edit wavetables.h).
 - Uses a 4x4 keypad matrix to select one of the settings (bottom right button to exit to "menu"),
-  pin connections defined in matrix.h .
-- Uses a single potentiometer (or joystick) to adjust the current setting up / down. _Alternatively_, you can also use a rotary encoder, by adjusting
-  just a few defines in userinput.h.
+  pin connections defined in matrix.h (default is PA4-7 for the rows, PB0, PB1, PB10, PB11 for the cols).
+- Uses a single potentiometer (or joystick) to adjust the current setting up / down (wiper connected to PA0).
+  - _Alternatively_, you can also use a rotary encoder, by adjusting just a few defines in userinput.h.
   - You could replace also this with simple +/- buttons - all you will have to do is provide appropriate versions of setup_updown() and read_updown()
   (trivial for buttons).
 - Uses a 128*64 pixel SSD1306 display with I2C interface, on the default I2C pins (PB6, PB7). To use a different display,
@@ -67,6 +67,9 @@ both easy to code, and (I think) easy to understand.
   - Preliminary debugging suggests the bottleneck is in updateAudio()
 - While adjusting settings or navigating the menu, audio will be severely disrupted. This is due to the fact that the I2C communication used with the display is synchronous (i.e. blocking).
 - This is all a work in progess. Some things _will_ break with an update, but I'll try not to break things, badly.
+- Some additional circuitry may be needed to get rid of noise. Two notes here:
+  - The SSD1306 display introduces a low hum, interestingly somtimes much louder, sometimes much more quiet. Disconnecting the power to the display removes the hum.
+  - When connecting the audio out to an amplifier (in particular a Class D amplifier), you will want to add a simple low pass filter to strip out the PWM carrier.
 
 ## Future directions
 For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Similarly, you can record and playback exactly one
