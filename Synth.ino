@@ -21,20 +21,16 @@
 #if defined(__AVR__)
 #error Sorry: It would not be too hard to get this sketch to compile for an 8bit processor, but it is way too complex for a tiny AVR. Written for and tested on an STM32F103C8T6, so no expensive hardware required.
 #endif
+#define DEFINE_NOW
 
-#include <MIDI.h>
 #include <MozziGuts.h>
-#include <Oscil.h>
 #include <mozzi_midi.h>
 #include <mozzi_rand.h>
 #include <ADSR.h>
 #include <LowPassFilter.h>
-#include <WaveShaper.h>
 #include <EventDelay.h>
 
 void saveVoice ();
-void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
-void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 
 #include "util.h"
 #include "display.h"
@@ -43,7 +39,6 @@ void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 #include "storage.h"
 #include "wavetables.h"
 #include "synthsettings.h"
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #include "midiplayer.h"
 MIDIPlayer player;
 #include "ui.h"
@@ -86,9 +81,7 @@ void setup() {
   setup_storage ();
 
   display_detail ("Starting:", "MIDI");
-  MIDI.begin();
-  MIDI.setHandleNoteOn(MyHandleNoteOn);
-  MIDI.setHandleNoteOff(MyHandleNoteOff);
+  player.setupMIDI ();
   for (byte i = 0; i < NOTECOUNT; ++i) {
     notes[i].env.setADLevels(200,100);
     notes[i].env.setDecayTime(100);
@@ -101,8 +94,7 @@ void setup() {
 
   display_detail ("Loading:", "Settings");
   loadVoice ();
-  setCurrentPage(&synth_settings_page_1);
-  menu_page_1p = &menu_page1;
+  UIPage::setCurrentPage(UIPage::SynthSettingsPage1);
   player.play ();
 
   display_detail ("Starting:", "Mozzi");
@@ -145,9 +137,9 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
 void updateControl() {
   player.update ();
 
-  current_page->handleButton (keypad.read ());
-  current_page->handleUpDown (read_updown ());
-  current_page->updateDisplay ();
+  UIPage::currentPage ()->handleButton (keypad.read ());
+  UIPage::currentPage ()->handleUpDown (read_updown ());
+  UIPage::currentPage ()->updateDisplay ();
 
   // If you enable the line below, here (and disable the corresponding line in MyHandleNoteOn(), notes _already playing_ will be affected by pot settings.
   // Of course, updating more often means more more CPU load. You may have to reduce the NOTECOUNT.

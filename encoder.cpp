@@ -1,11 +1,7 @@
-#ifndef ENCODER_H
-#define ENCODER_H
+#include "userinput.h"
 
 /* Reading from a rotary encoder, with software debouncing */
-
-#ifndef (ENCODER_AS_TUNER)
-#error This file to be included from userinput.h, only.
-#endif
+#if defined (ENCODER_AS_TUNER)
 
 // Encoder needs to check for updates more frequently than control rate.
 #define HIGH_FREQUENCY_HOOK update_encoder
@@ -94,4 +90,5 @@ void setup_encoder() {
 }
 
 #endif
+
 
