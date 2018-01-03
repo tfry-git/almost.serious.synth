@@ -17,7 +17,7 @@ The setup is mostly inspired by AMSynth (but adds some more complex wave forms).
   - You could replace also this with simple +/- buttons - all you will have to do is provide appropriate versions of setup_updown() and read_updown()
   (trivial for buttons).
 - Uses a 128*64 pixel SSD1306 display with I2C interface, on the default I2C pins (PB6, PB7). To use a different display,
-  edit display.h to your liking. However you'll have a hard time making do with any lower resolution.
+  edit display.cpp to your liking. However you'll have a hard time making do with any lower resolution.
 - MIDI connected on Serial1, i.e. PA9, PA10. So far, only RX is used.
 - Audio output on pin PB8 - you can connect a headphone, directly - see Mozzi documentation.
   - Optionally an audio-amp and speaker connected to PB8.
