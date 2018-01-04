@@ -6,9 +6,12 @@
 #include <SD.h>
 
 void setup_storage();
-File defaultVoiceReadHandle ();
-File defaultVoiceSaveHandle ();
+File defaultVoiceFileHandle ();
 File defaultMIDIRecHandle ();
+File openMidiDirectory ();
+File openVoiceDirectory ();
+File openVoiceFile (const char *name);
+File openMidiFile (const char *name);
 
 #endif
 

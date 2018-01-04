@@ -32,9 +32,12 @@ Setting settings[SETTINGS_COUNT] = {
 };
 
 #include "storage.h"
+#include "ui.h"
+#include "display.h"
 
-void saveVoice () {
-  File f = defaultVoiceSaveHandle ();
+void saveVoice (const char *name) {
+  if (name[0] == '\0') return;
+  File f = openVoiceFile (name);
   f.seek (0);
   int16_t vals[SETTINGS_COUNT];
   for (int i = 0; i < SETTINGS_COUNT; ++i) {
@@ -43,15 +46,20 @@ void saveVoice () {
     f.write ((byte) (val & 0xFF));
   }
   f.close ();
+  UIPage::setCurrentPage (UIPage::SynthSettingsPage1);
+  display_detail ("Saved voice", f.name ());
 }
 
-void loadVoice () {
-  File f = defaultVoiceReadHandle ();
+void loadVoice (const char* name) {
+  File f = openVoiceFile (name);
+  f.seek (0);
   byte buf[SETTINGS_COUNT * 2];
   int len = f.read (buf, SETTINGS_COUNT * 2) / 2;
   for (int i = 0; i < len; ++i) {
     settings[i].value = (buf[i*2] << 8) | buf[i*2+1];
   }
   f.close ();
+  UIPage::setCurrentPage (UIPage::SynthSettingsPage1);
+  display_detail ("Loaded voice", f.name ());
 }
 

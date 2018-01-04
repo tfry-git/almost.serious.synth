@@ -39,7 +39,7 @@ enum Settings {
 };
 extern Setting settings[SETTINGS_COUNT];
 
-void saveVoice ();
-void loadVoice ();
+void saveVoice (const char* name);
+void loadVoice (const char* name = "");
 
 #endif

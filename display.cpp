@@ -31,6 +31,11 @@ void display_icon(int8_t row, int8_t col, const char *shortname, const char* val
 //    display.display();  // Always followed by a call to display_detail in our sketch, so not needed.
 }
 
+void display_button (int8_t row, int8_t col, const char *name) {
+    // TODO: we should improve on this...
+    display_icon (row, col, "----", name, false);
+}
+
 void display_detail(const char *label, const char* value) {
     display.fillRect(0, 57, 128, 7, 0);
     display.setTextSize(1);
@@ -40,6 +45,18 @@ void display_detail(const char *label, const char* value) {
     display.setCursor(128-strlen(value)*FONT_SPACING,57);
     display.println(value);
     display.display();
+}
+
+void display_line(const char *line, int8_t row) {
+  int16_t x = 0;
+  int16_t y = row * SECTION_HEIGHT + 1;
+  int16_t w = 127;
+  int16_t h = SECTION_HEIGHT - 2;
+  display.setTextSize(1);
+  display.fillRect(x, y, w, h, 0);
+  display.setTextColor(WHITE);
+  display.setCursor (x+1, y+2);
+  display.println(line);
 }
 
 // Draw a (menu) header. Note: x, y, w, and h given in logical sections, i.e. 1..4

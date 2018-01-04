@@ -5,6 +5,7 @@
 #include <midi_RingBuffer.h>
 #include <mozzi_rand.h>
 #include <MozziGuts.h>
+#include "display.h"
 
 #define SERIAL_INTERFACE Serial1
 
@@ -52,10 +53,16 @@ void MIDIPlayer::setupMIDI () {
   MIDI.setHandleNoteOff(MyHandleNoteOff);
 }
 
-void MIDIPlayer::play () {
+void MIDIPlayer::play (const char *file) {
   stop ();
   state = Playing;
-  io = defaultMIDIRecHandle ();
+  if (file[0] == '\0') {
+    if (!io) io = defaultMIDIRecHandle ();
+    else openMidiFile (io.name ()); // it was closed, above
+  } else {
+    io = openMidiFile (file);
+  }
+  display_detail ("Playing", io.name ());
   infile.load (io);
 }
   
@@ -63,6 +70,7 @@ void MIDIPlayer::playRandom () {
   stop ();
 //  randSeed (mozziMicros ());  -- hangs?!
   state = PlayingRandom;
+  display_detail ("Playing", "random notes");
 }
 
 void MIDIPlayer::stop () {
@@ -203,6 +211,8 @@ void MIDIPlaybackFile::handleTrackHeader () {
       io.seek (io.position () - 8); // go back, and try to interpret as naked event stream
       tracklen = io.size () - io.position ();
     }
+  } else {
+    tracklen = io.size () - io.position ();
   }
   trackstart = io.position ();
 
@@ -233,8 +243,10 @@ bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
       handleTrackHeader ();
       return false;
     } else if (in == 0xFF) {   // set tempo
+      io.read ();
       uint32_t micros_per_beat = io.read () << 16 + io.read () << 8 + io.read ();
       micros_per_tick = micros_per_beat / ticks_per_beat;
+      return true;
     }
     byte len = io.read ();
     io.seek (io.position () + len);

@@ -21,18 +21,53 @@ void setup_storage () {
   }
 }
 
-File defaultVoiceReadHandle () {
-  if (!SD_storage_available) return File();
-  return SD.open(VOICES_DIRECTORY "/0.voc");
+
+File defaultVoiceFileHandle () {
+  return openVoiceFile ("");
 }
 
-File defaultVoiceSaveHandle () {
+File openVoiceFile (const char* name) {
   if (!SD_storage_available) return File();
-  return SD.open(VOICES_DIRECTORY "/0.voc", FILE_WRITE);
+  char buf[32];
+  strcpy (buf, VOICES_DIRECTORY);
+
+  if (name[0] == '\0') { // No name specified: Use first file in dir
+    File dir = SD.open(buf);
+    File dummy = dir.openNextFile();
+    strcat (buf, "/");
+    strcat (buf, dummy.name ());
+    dir.close ();
+    dummy.close ();
+    return SD.open(buf, FILE_WRITE);
+  } else {
+    strcat (buf, "/");
+    strcat (buf, name);
+  }
+
+  return SD.open(buf, FILE_WRITE);
+}
+
+File openVoiceDirectory () {
+  if (!SD_storage_available) return File();
+  return SD.open(VOICES_DIRECTORY);
 }
 
 File defaultMIDIRecHandle () {
+  return openMidiFile ("");
+}
+
+File openMidiDirectory () {
   if (!SD_storage_available) return File();
-  return SD.open(MIDI_DIRECTORY "/0.mid", FILE_WRITE);
+  return SD.open(MIDI_DIRECTORY);
+}
+
+File openMidiFile (const char* name) {
+  if (!SD_storage_available) return File();
+  if (name[0] == '\0') return SD.open (MIDI_DIRECTORY "/0.mid", FILE_WRITE);
+  char buf[32] = "";
+  strcat (buf, MIDI_DIRECTORY);
+  strcat (buf, "/");
+  strcat (buf, name);
+  return SD.open(buf, FILE_WRITE);
 }
 

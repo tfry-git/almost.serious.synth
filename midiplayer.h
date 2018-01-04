@@ -37,7 +37,7 @@ private:
 class MIDIPlayer {
 public:
   void setupMIDI ();
-  void play ();
+  void play (const char *file = "");
   void playRandom ();
   void stop ();
   void record ();

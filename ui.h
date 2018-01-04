@@ -12,13 +12,14 @@ public:
   virtual void updateDisplay () = 0;           /// update display (if necessary)
   enum PageID {
     MenuPage1,
-    SynthSettingsPage1
+    SynthSettingsPage1,
+    SelectExistingFile,
+    SaveFile
   };
   static void setCurrentPage (PageID page);
   static UIPage* currentPage () { return current_page; };
 protected:
   virtual void initDisplay () = 0;             /// intialize the display. To be called, when the page has just been activated.
-  void drawMenuOption (const char* label, int8_t row, int8_t col);
   static UIPage* current_page;
 };
 
@@ -44,6 +45,38 @@ public:
   void updateDisplay ();
 private:
   void drawMIDIPlayOptions ();
+};
+
+#include "storage.h"
+/** Allows to select an existing file inside a given directory. When done, a callback is called with the selected filename as parameter. */
+class SelectFilePage : public UIPage {
+public:
+  void initDisplay () override;
+  void handleUpDown (int8_t delta) override;
+  void handleButton (int8_t but);
+  void updateDisplay ();
+  void selectFile (File directory, void (*callback)(const char*));
+private:
+  File dir;
+  File entry;
+  void (*callback) (const char*);
+  int16_t pos;
+};
+
+/** Asks for a save file name */
+class SaveFilePage : public UIPage {
+public:
+  void initDisplay () override;
+  void handleUpDown (int8_t delta) override;
+  void handleButton (int8_t but);
+  void updateDisplay ();
+  void saveFile (File directory, const char* initial_name, const char* extension, void (*callback)(const char*));
+private:
+  File dir;
+  char name[9];
+  char extension[4];
+  void (*callback) (const char*);
+  int16_t pos;
 };
 
 #endif

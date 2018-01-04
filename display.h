@@ -12,10 +12,12 @@ void display_clear();
 void display_commit();
 
 void display_icon(int8_t row, int8_t col, const char *shortname, const char* value, bool active);
+void display_button (int8_t row, int8_t col, const char *name);
 /** Display a short message in the detail area. */
 void display_detail(const char *label, const char* value);
 // Draw a (menu) header. Note: x, y, w, and h given in logical sections, i.e. 1..4
 void display_header_bar(const char *label, int8_t row);
+void display_line (const char *line, int8_t row);
 
 #endif
 

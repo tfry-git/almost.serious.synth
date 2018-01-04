@@ -34,7 +34,7 @@ At the time of this writing, the UI consist of two pages, one for the Synthesize
 row 2, column 3, etc.
 
 For the time being, when starting, the Synth will play the latest MIDI recording (if any, random notes, otherwise), which is pretty useful during development. To turn this off,
-go the main menu, and select "Stop" (row 3, column 2).
+go the main menu, and select "Stop" (row 3, column 2). It will load the first saved voice on startup.
 
 ## Synthesizer settings
 - Top row: Envelope - Attack, Decay, Sustain, Release
@@ -48,6 +48,9 @@ go the main menu, and select "Stop" (row 3, column 2).
 - Row 2: "Edit" -> Go to the synthesizer settings page; "Save"/"Load" -> Save / load current voice to/from SD card
 - Row 3: Caption for the MIDI related options in the next row
 - Row 4: "Rec/Stop" -> Start / end recording MIDI from MIDI in; "Play/Stop" -> Play / stop playing the current MIDI sequence; "Save"/"Load" -> Save / load MIDI track to/from SD card
+
+## Saving / loading voices / recordings
+I hope these are pretty self-explanatory, if clumsy. Otherwise, ask. Suggestions for improvements welcome.
 
 ## Waveforms
 One of the things that may not be self-explanatory is probably the waveforms. First, there are the usual "basic" waveforms square ("Squ"), sine ("Sin"), saw / ramp ("Saw"),
@@ -77,8 +80,7 @@ both easy to code, and (I think) easy to understand.
   - NoteOn and NoteOff are the only events handled, so far, but most events are recorded.
 
 ## Future directions
-For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Similarly, you can record and playback exactly one
-MIDI sequence ("/MIDI/0.mid"). Of course the plan is to offer to store an arbitrary number of named voices / sequences.
+Saving / loading of voices / MIDI files is still pretty clumsy. That needs improvments.
 
 There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
 "pages" of settings, or a larger display.
