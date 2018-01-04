@@ -4,20 +4,21 @@
 #include <midi_Defs.h>
 #include <midi_RingBuffer.h>
 #include <mozzi_rand.h>
+#include <MozziGuts.h>
 
 #define SERIAL_INTERFACE Serial1
 
 /** This class wraps the real serial interface to use, but adds a buffer that we can use to feed
  *  MIDI events (esp. from file) to the MIDI library.
  */
-class MIDISideBuffer {
+/*class MIDISideBuffer {
 public: // Arduino Serial API
     void begin (int inBaudrate) {
       SERIAL_INTERFACE.begin (inBaudrate);
     }
 
     int available() const {
-      if (buffer.isEmpty()) return SERIAL_INTERFACE.available();
+//      if (buffer.isEmpty()) return SERIAL_INTERFACE.available();
       return buffer.getLength();
     }
 
@@ -30,16 +31,14 @@ public: // Arduino Serial API
     }
 
     uint8_t read() {
-      if (buffer.isEmpty()) return SERIAL_INTERFACE.read();
+//      if (buffer.isEmpty()) return SERIAL_INTERFACE.read();
       return buffer.read();
     }
 private:
     midi::RingBuffer<uint8_t, 128> buffer;
-};
-
-MIDISideBuffer midi_side_buffer;
-
-MIDI_CREATE_INSTANCE(MIDISideBuffer, midi_side_buffer, MIDI);
+} midi_side_buffer;
+MIDI_CREATE_INSTANCE(MIDISideBuffer, midi_side_buffer, MIDI); */
+MIDI_CREATE_INSTANCE(HardwareSerial, SERIAL_INTERFACE, MIDI);
 
 byte MidiMessageLength (byte mtype) {
   // TODO: This is correct only for the MIDI events we record ourselves. not for everything else.
@@ -67,6 +66,16 @@ void MIDIPlayer::playRandom () {
 }
 
 void MIDIPlayer::stop () {
+  if (state == Recording) {
+    uint32_t size = io.size ();
+    byte buf[4];
+    for (int8_t pos = 3; pos >= 0; --pos) {
+      buf[pos] = size & 0xFF;
+      size = size >> 8;
+    }
+    io.seek (14 + 4); // The position where the track length is stored.
+    io.write (buf, 4);
+  }
   io.close ();
   state = Stopped;
 }
@@ -77,6 +86,10 @@ void MIDIPlayer::record () {
   event_time = 0;
   io = defaultMIDIRecHandle ();
   io.seek (0);
+  byte head[14] = {0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0xe7, 0x28};  // MIDI header chunk, Format 0, one track, millisecond based
+  io.write (head, 14);
+  byte trackhead[] = {0x4d, 0x54, 0x72, 0x6b, 0x00, 0xff, 0xff, 0xff}; // MIDI track header chunk. We lie about the length, as we don't know it, yet.
+  io.write (trackhead, 8);
 }
 
 void MIDIPlayer::update () {
@@ -97,8 +110,7 @@ void MIDIPlayer::update () {
   if (state == Stopped) return;
 
   if (state == Playing) {
-    uint32_t now = nowTime();
-    while (infile.doNextEvent (now)) {};
+    infile.processEvents ();
     if (!io.available ()) {
       if (io.size () > 0) { // Loop, unless there is no file to play.
         play ();
@@ -109,7 +121,7 @@ void MIDIPlayer::update () {
   }
   
   if (state == PlayingRandom) {
-    uint32_t now = nowTime();
+    uint32_t now = mozziMicros();
     if (now - event_time > 1000) {
       MyHandleNoteOn (1, rand (20) + 77, 100);
       event_time = now;
@@ -154,12 +166,26 @@ void MIDIPlaybackFile::load (File f) {
   next_event_time = nowTime ();
 
   if (io.available () >= 14) {  // size of MIDI header
-    char buf[14];
+    byte buf[14];
     io.read (buf, 14);
     if (buf[0] == 'M' && buf[1] == 'T' && buf[2] == 'h' && buf[3] == 'd') {  // MIDI header
-      // TODO: parse delta time specification
+      if (buf[12] & 0x80) {
+        // SMPTE delta time spec - slightly verbose calculation, but it makes my brain hurt
+        uint8_t frames_per_second = -(signed char) buf[12];
+        uint8_t ticks_per_frame = buf[13];
+        uint16_t ticks_per_second = frames_per_second * ticks_per_frame;
+        micros_per_tick = 1000000ul / ticks_per_second;
+        // SMPTE indexed files must not send set tempo events, but just in case, we'll initalize the tempo spec to 120 bpm,
+        // so we can still handle set tempo events.
+        ticks_per_beat = 500000ul / micros_per_tick;
+      } else {
+        ticks_per_beat = buf[12] << 8 + buf[13];
+        micros_per_tick = 500000ul / ticks_per_beat;   // 500000 micros per beat = 120 beats per minute
+      }
     } else {
       io.seek (0); // ignore, and try to interpret as naked track, below
+      micros_per_tick = 1000ul;  // Assume millisecond based, 120 bpm
+      ticks_per_beat = 500000ul / micros_per_tick;
     }
   }
 
@@ -183,6 +209,11 @@ void MIDIPlaybackFile::handleTrackHeader () {
   advance ();
 }
 
+void MIDIPlaybackFile::processEvents () {
+  uint32_t now = nowTime ();
+  while (doNextEvent (now)) {}
+}
+
 bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
   if (now < next_event_time) return false;
 
@@ -202,13 +233,28 @@ bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
       handleTrackHeader ();
       return false;
     } else if (in == 0xFF) {   // set tempo
-      // TODO We should really handle this...
+      uint32_t micros_per_beat = io.read () << 16 + io.read () << 8 + io.read ();
+      micros_per_tick = micros_per_beat / ticks_per_beat;
     }
     byte len = io.read ();
     io.seek (io.position () + len);
+  } else if (in >= 0xF0) { // System events -- we'll just skip those
+    if (in == 0xF0) {
+      byte in = io.read (); // skip vendor byte
+      while ((in = io.read ()) != 0xF7) { // look for termination byte
+        if (atEndOfTrack ()) break;
+      }
+    } else if (in == 0xF2) {
+      io.read ();
+      io.read ();
+    } else if (in == 0xF3) {
+      io.read ();
+    } else {
+      // no further bytes to read
+    }
   } else {
       // TODO: We should really offload the following to the MIDI library, by writing it to a fake in buffer.
-      // BUT why isn't this working?
+      // BUT why isn't this working (hangs)?
 /*    midi_side_buffer.writeBuffer (in);
     while (!MIDI.read ()) {
       if (atEndOfTrack ()) break;
@@ -243,7 +289,7 @@ bool MIDIPlaybackFile::atEndOfTrack () {
 }
 
 void MIDIPlaybackFile::advance () {
-  if (!atEndOfTrack ()) next_event_time += readVarLong ();
+  if (!atEndOfTrack ()) next_event_time += ticksToMicros (readVarLong ());
   else if (io.available ()) handleTrackHeader ();
 }
 
@@ -259,6 +305,7 @@ uint32_t MIDIPlaybackFile::readVarLong () {
 }
 
 uint32_t MIDIPlaybackFile::nowTime () const {
-  return millis ();
+  return mozziMicros ();
 }
+
 

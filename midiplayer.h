@@ -6,25 +6,31 @@
 void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
 void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 
-/** Wraps a MIDI file to be played back. Importantly, it takes care of parsing (well - skipping, for now) the file
- *  header and track headers, as well as swallowing meta events, such that the data given by read() will contain
- *  a "clean" stream of MIDI events.
+/** Wraps a MIDI file to be played back. Importantly, it takes care of parsing (well - mostly skipping, for now) the file
+ *  header and track headers.
  */
 class MIDIPlaybackFile {
 public:
   void load (File io);
-  bool doNextEvent (uint32_t now);
+  void processEvents ();
   bool atEndOfTrack ();
 private:
+  bool doNextEvent (uint32_t now);
   void handleTrackHeader ();
   void advance ();
   uint32_t nowTime () const;
   /** Read a MIDI variable length entry from file. */
   uint32_t readVarLong ();
+  uint32_t ticksToMicros (uint32_t ticks) const {
+    return ticks * micros_per_tick;
+  }
   File io;
   uint32_t tracklen;
   uint32_t trackstart;
   uint32_t next_event_time;
+
+  uint32_t micros_per_tick;
+  uint32_t ticks_per_beat;
 };
 
 /** This class is meant to handle recording and playback of MIDI events. */

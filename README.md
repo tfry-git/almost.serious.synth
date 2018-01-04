@@ -70,6 +70,11 @@ both easy to code, and (I think) easy to understand.
 - Some additional circuitry may be needed to get rid of noise. Two notes here:
   - The SSD1306 display introduces a low hum, interestingly somtimes much louder, sometimes much more quiet. Disconnecting the power to the display removes the hum.
   - When connecting the audio out to an amplifier (in particular a Class D amplifier), you will want to add a simple low pass filter to strip out the PWM carrier.
+- MIDI playback / recording
+  - Theoretically, the Synth can play back arbitray Format 0 and Format 2 MIDI files - but that theory is not well tested.
+  - Format 1 files will not be played, correctly, so far
+  - The recorded MIDI is a valid format 0 file - again not much tested, though
+  - NoteOn and NoteOff are the only events handled, so far, but most events are recorded.
 
 ## Future directions
 For now the Synth will save a single set of synth settings on the SD card ("/voices/0.voc"), and restore them on startup. Similarly, you can record and playback exactly one
