@@ -6,6 +6,8 @@
 void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
 void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 
+#define MAX_MIDI_TRACKS 16u  // for now we use static allocation of MIDI tracks (for format 1 playback). NOTE this is track _per_ file
+
 /** Wraps a MIDI file to be played back. Importantly, it takes care of parsing (well - mostly skipping, for now) the file
  *  header and track headers.
  */
@@ -14,10 +16,11 @@ public:
   void load (File io);
   void processEvents ();
   bool atEndOfTrack ();
+  inline bool isFinished () {
+    if (format2) return (!io.available ());
+    return (num_tracks == 0);
+  }
 private:
-  bool doNextEvent (uint32_t now);
-  void handleTrackHeader ();
-  void advance ();
   uint32_t nowTime () const;
   /** Read a MIDI variable length entry from file. */
   uint32_t readVarLong ();
@@ -25,12 +28,22 @@ private:
     return ticks * micros_per_tick;
   }
   File io;
-  uint32_t tracklen;
-  uint32_t trackstart;
-  uint32_t next_event_time;
-
+  uint32_t num_tracks;
+  bool format2;
   uint32_t micros_per_tick;
   uint32_t ticks_per_beat;
+
+  struct Track {
+    uint32_t trackend;
+    uint32_t trackpos;
+    uint32_t next_event_time;
+  } tracks[MAX_MIDI_TRACKS];
+  void handleTrackHeader (Track &track);
+  inline bool atEndOfTrack (Track &track) {
+    return (io.position () > track.trackend);
+  }
+  bool doNextEvent (Track &track);
+  void advance (Track &track);
 };
 
 /** This class is meant to handle recording and playback of MIDI events. */

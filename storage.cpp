@@ -34,9 +34,10 @@ File openVoiceFile (const char* name) {
   if (name[0] == '\0') { // No name specified: Use first file in dir
     File dir = SD.open(buf);
     File dummy = dir.openNextFile();
+    dir.close ();
+    if (!dummy) return File ();
     strcat (buf, "/");
     strcat (buf, dummy.name ());
-    dir.close ();
     dummy.close ();
     return SD.open(buf, FILE_WRITE);
   } else {

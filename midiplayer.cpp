@@ -2,10 +2,11 @@
 
 #include <MIDI.h>
 #include <midi_Defs.h>
-#include <midi_RingBuffer.h>
+#include <mozzi_utils.h>
 #include <mozzi_rand.h>
 #include <MozziGuts.h>
 #include "display.h"
+#include "util.h"
 
 #define SERIAL_INTERFACE Serial1
 
@@ -118,10 +119,11 @@ void MIDIPlayer::update () {
   if (state == Stopped) return;
 
   if (state == Playing) {
-    infile.processEvents ();
-    if (!io.available ()) {
+    if (!infile.isFinished ()) {
+      infile.processEvents ();
+    } else {
       if (io.size () > 0) { // Loop, unless there is no file to play.
-        play ();
+        play (io.name ());
       } else {
         playRandom ();
       }
@@ -130,7 +132,7 @@ void MIDIPlayer::update () {
   
   if (state == PlayingRandom) {
     uint32_t now = mozziMicros();
-    if (now - event_time > 1000) {
+    if (now - event_time > 1000000ul) {
       MyHandleNoteOn (1, rand (20) + 77, 100);
       event_time = now;
     }
@@ -171,7 +173,9 @@ uint32_t MIDIPlayer::nowTime () const {
 void MIDIPlaybackFile::load (File f) {
   io = f;
   io.seek (0);
-  next_event_time = nowTime ();
+  uint32_t now = nowTime ();
+  num_tracks = 1;
+  format2 = true;
 
   if (io.available () >= 14) {  // size of MIDI header
     byte buf[14];
@@ -187,9 +191,16 @@ void MIDIPlaybackFile::load (File f) {
         // so we can still handle set tempo events.
         ticks_per_beat = 500000ul / micros_per_tick;
       } else {
-        ticks_per_beat = buf[12] << 8 + buf[13];
+        ticks_per_beat = ((uint32_t) buf[12] << 8) + (uint32_t) buf[13];
         micros_per_tick = 500000ul / ticks_per_beat;   // 500000 micros per beat = 120 beats per minute
       }
+      if (buf[9] == 1) { // format 1 file
+        num_tracks = min (MAX_MIDI_TRACKS, buf[11]);//u8ranged (min (MAX_MIDI_TRACKS, ((uint16_t) buf[10] << 8 + buf[11])));
+        format2 = false;
+      }
+      // NOTE that we do not update track count in case of format 2 files: As there is only one _simultaneous_ track, we don't need any fancy bookkeeping
+      // and just skip over any track ends / headers found in the middle of the file.
+      // For the same reason, we simply treat format0 as format2
     } else {
       io.seek (0); // ignore, and try to interpret as naked track, below
       micros_per_tick = 1000ul;  // Assume millisecond based, 120 bpm
@@ -197,41 +208,73 @@ void MIDIPlaybackFile::load (File f) {
     }
   }
 
-  handleTrackHeader ();
+  for (uint8_t i = 0; i < num_tracks; ++i) {
+    if (i > 0) {
+      io.seek (tracks[i-1].trackend + 1);
+    }
+    Track &track = tracks[i];
+    track.trackpos = io.position ();
+    track.trackend = io.size () - 1; // correct value will be set in handleTrackHeader, but we need an upper bound!
+    track.next_event_time = now;
+    handleTrackHeader (track);
+  }
+  io.seek (tracks[0].trackpos);
 }
 
-void MIDIPlaybackFile::handleTrackHeader () {
+void MIDIPlaybackFile::handleTrackHeader (Track &track) {
 
   if (io.available () >= 8) {
     byte buf[8];
     io.read (buf, 8);
     if (buf[0] == 'M' && buf[1] == 'T' && buf[2] == 'r' && buf[3] == 'k') {  // MIDI track
-      tracklen = buf[4] << 24 + buf[5] << 16 + buf[6] << 8 + buf[7];
+      track.trackend = io.position () + ((uint32_t) buf[4] << 24) + ((uint32_t) buf[5] << 16) + ((uint32_t) buf[6] << 8) + (uint32_t) buf[7];
     } else {
       io.seek (io.position () - 8); // go back, and try to interpret as naked event stream
-      tracklen = io.size () - io.position ();
+      track.trackend = io.size () - 1;
     }
   } else {
-    tracklen = io.size () - io.position ();
+    track.trackend = io.size () - 1;
   }
-  trackstart = io.position ();
+  track.trackpos = io.position ();
 
-  advance ();
+  advance (track);
 }
 
 void MIDIPlaybackFile::processEvents () {
   uint32_t now = nowTime ();
-  while (doNextEvent (now)) {}
+  for (uint8_t i = 0; i < num_tracks; ++i) {
+    Track &track = tracks[i];
+    bool first = true;
+    while (now > track.next_event_time || (now > 0xF0000000 && track.next_event_time < 0x10000000)) {
+      if (first) {
+        io.seek (track.trackpos);
+        first = false;
+      }
+      if (atEndOfTrack (track)) break;
+      if (!doNextEvent (track)) break;
+    }
+    if (!first) {
+      track.trackpos = io.position ();
+      if (atEndOfTrack (track)) {  // if a track has finished playing, remove it.
+//char bufc[12];
+//cheap_itoa (bufc, num_tracks, 6);
+//display_detail ("tc", bufc);
+        for (uint8_t j = i+1; j < num_tracks; ++j) {
+          tracks[j-1] = tracks[j];
+        }
+        --num_tracks;
+        --i;
+      }
+    }
+  }
 }
 
-bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
-  if (now < next_event_time) return false;
-
+bool MIDIPlaybackFile::doNextEvent (Track &track) {
   byte in = io.read (); // This should be the command byte
   while (!(in & 0x80)) { // But we got something else? Fast forward to the next elegible byte, and _try_ to make some sense from there.
     // Which is not a really good strategy, either, as - contrary to a live stream - we will probably probably get screwed by a delta time, instead...
-    if (atEndOfTrack ()) {
-      handleTrackHeader ();
+    if (atEndOfTrack (track)) {
+      if (format2) handleTrackHeader (track);
       return false;
     }
     in = io.read ();
@@ -239,22 +282,30 @@ bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
   if (in == 0xFF) {  // Meta event. we'll have to eat that, as the MIDI library does not handle it
     in = io.read ();
     if (in == 0x2F) {      // end of track
+      track.trackend = io.position ();
       io.read ();
-      handleTrackHeader ();
+      if (format2) handleTrackHeader (track);
       return false;
-    } else if (in == 0xFF) {   // set tempo
+    } else if (in == 0x51) {   // set tempo
       io.read ();
-      uint32_t micros_per_beat = io.read () << 16 + io.read () << 8 + io.read ();
+      uint32_t micros_per_beat = ((uint32_t) io.read () << 16) + ((uint32_t) io.read () << 8) + (uint32_t) io.read ();
       micros_per_tick = micros_per_beat / ticks_per_beat;
-      return true;
+      //char bufc[12];
+      //cheap_itoa (bufc, micros_per_tick, 6);
+      //display_detail ("set mpt", bufc);
+    } else if (in == 0x54) {  // SMPTE offset - handle like a delta time
+      io.read ();
+      // NOT correct! We assume millisecond ticks, here (frames and frame-fraction bits), which is not a bad guess, but no more than that.
+      track.next_event_time += (uint32_t) io.read () * 3600000000ul + (uint32_t) io.read () * 60000000ul + (uint32_t) io.read () * 1000000ul + (uint32_t) io.read ()*40ul + io.read ();
+    } else {
+      byte len = io.read ();
+      io.seek (io.position () + len);
     }
-    byte len = io.read ();
-    io.seek (io.position () + len);
   } else if (in >= 0xF0) { // System events -- we'll just skip those
     if (in == 0xF0) {
       byte in = io.read (); // skip vendor byte
       while ((in = io.read ()) != 0xF7) { // look for termination byte
-        if (atEndOfTrack ()) break;
+        if (atEndOfTrack (track)) break;
       }
     } else if (in == 0xF2) {
       io.read ();
@@ -269,7 +320,7 @@ bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
       // BUT why isn't this working (hangs)?
 /*    midi_side_buffer.writeBuffer (in);
     while (!MIDI.read ()) {
-      if (atEndOfTrack ()) break;
+      if (atEndOfTrack (track)) break;
       midi_side_buffer.writeBuffer (io.read ());
     } */
     byte mtype = in & 0xF0;
@@ -292,17 +343,16 @@ bool MIDIPlaybackFile::doNextEvent (uint32_t now) {
     }
   }
 
-  advance ();
+  advance (track);
   return true;
 }
 
-bool MIDIPlaybackFile::atEndOfTrack () {
-  return (trackstart + tracklen < io.position () || !io.available ());
-}
-
-void MIDIPlaybackFile::advance () {
-  if (!atEndOfTrack ()) next_event_time += ticksToMicros (readVarLong ());
-  else if (io.available ()) handleTrackHeader ();
+void MIDIPlaybackFile::advance (Track &track) {
+  if (!atEndOfTrack (track)) {
+    track.next_event_time += ticksToMicros (readVarLong ());
+    track.trackpos = io.position ();
+  }
+  else if (format2 && io.available ()) handleTrackHeader (track);
 }
 
 uint32_t MIDIPlaybackFile::readVarLong () {

@@ -33,7 +33,7 @@ At the time of this writing, the UI consist of two pages, one for the Synthesize
 4 by 4 matrix, corresponding to the buttons of the keypad. So, to select the setting / activate the option in row 2, colum 3, you press the button in
 row 2, column 3, etc.
 
-For the time being, when starting, the Synth will play the latest MIDI recording (if any, random notes, otherwise), which is pretty useful during development. To turn this off,
+For the time being, when starting, the Synth will play random notes on startup, which is pretty useful during development. To turn this off,
 go the main menu, and select "Stop" (row 3, column 2). It will load the first saved voice on startup.
 
 ## Synthesizer settings
@@ -71,16 +71,20 @@ both easy to code, and (I think) easy to understand.
 - While adjusting settings or navigating the menu, audio will be severely disrupted. This is due to the fact that the I2C communication used with the display is synchronous (i.e. blocking).
 - This is all a work in progess. Some things _will_ break with an update, but I'll try not to break things, badly.
 - Some additional circuitry may be needed to get rid of noise. Two notes here:
-  - The SSD1306 display introduces a low hum, interestingly somtimes much louder, sometimes much more quiet. Disconnecting the power to the display removes the hum.
+  - The SSD1306 display introduces a low hum, changing with the display content. The hum is reduced a lot (but does not quite go away) when powering the display from the 5V rail. Perhaps try
+    equipping it with a voltage regulator of its own (I have not tried, yet)
   - When connecting the audio out to an amplifier (in particular a Class D amplifier), you will want to add a simple low pass filter to strip out the PWM carrier.
 - MIDI playback / recording
-  - Theoretically, the Synth can play back arbitray Format 0 and Format 2 MIDI files - but that theory is not well tested.
-  - Format 1 files will not be played, correctly, so far
+  - Theoretically, the Synth can play back arbitrary Format 0 and Format 2 MIDI files - but that theory is not well tested.
+  - _Some_ format 1 files will play alright, but other will not play at all. Currently, I have no idea, why.
   - The recorded MIDI is a valid format 0 file - again not much tested, though
   - NoteOn and NoteOff are the only events handled, so far, but most events are recorded.
 
 ## Future directions
 Saving / loading of voices / MIDI files is still pretty clumsy. That needs improvments.
+
+MIDI recording could be enhanced a lot, to turn the Synth into a full MIDI sequencer. Minimally (long term), I'd like to be able to add simultaneous tracks to a MIDI redcording,
+and set separate voices for each track. The short term goal is to handle MIDI file format 1 (i.e. symultaneous tracks on file), correctly.
 
 There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
 "pages" of settings, or a larger display.

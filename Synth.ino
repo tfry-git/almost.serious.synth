@@ -22,6 +22,8 @@
 #error Sorry: It would not be too hard to get this sketch to compile for an 8bit processor, but it is way too complex for a tiny AVR. Written for and tested on an STM32F103C8T6, so no expensive hardware required.
 #endif
 #define DEFINE_NOW
+// Rate (Hz) of calling updateControl(), powers of 2 please.
+#define CONTROL_RATE 128
 
 #include <MozziGuts.h>
 #include <mozzi_midi.h>
@@ -76,6 +78,7 @@ struct Note {
 Note notes[NOTECOUNT];
 
 void setup() {
+  pinMode (LED_BUILTIN, OUTPUT);
   setup_display ();
   display_detail ("Starting:", "Storage");
   setup_storage ();
@@ -95,7 +98,7 @@ void setup() {
   display_detail ("Loading:", "Settings");
   loadVoice ();
   UIPage::setCurrentPage(UIPage::SynthSettingsPage1);
-  player.play ();
+  player.playRandom ();
 
   display_detail ("Starting:", "Mozzi");
   startMozzi(CONTROL_RATE);
