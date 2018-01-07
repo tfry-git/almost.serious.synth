@@ -173,7 +173,6 @@ uint32_t MIDIPlayer::nowTime () const {
 void MIDIPlaybackFile::load (File f) {
   io = f;
   io.seek (0);
-  uint32_t now = nowTime ();
   num_tracks = 1;
   format2 = true;
 
@@ -213,11 +212,15 @@ void MIDIPlaybackFile::load (File f) {
       io.seek (tracks[i-1].trackend);
     }
     Track &track = tracks[i];
+    track.running_status = 0;
     track.trackend = io.size (); // correct value will be set in handleTrackHeader, but we need an upper bound!
-    track.next_event_time = now;
+    track.next_event_time = 0;
     handleTrackHeader (track);
   }
   io.seek (tracks[0].trackpos);
+
+  current_tick = 0;
+  current_tick_time = mozziMicros ();
 }
 
 void MIDIPlaybackFile::handleTrackHeader (Track &track) {
@@ -240,12 +243,14 @@ void MIDIPlaybackFile::handleTrackHeader (Track &track) {
 }
 
 void MIDIPlaybackFile::processEvents () {
-  uint32_t now = nowTime ();
+  uint32_t elapsed_ticks = (mozziMicros () - current_tick_time) / micros_per_tick;
+  current_tick += elapsed_ticks;
+  current_tick_time += elapsed_ticks * micros_per_tick;  // not simply using "now", as we might be half-way into the next tick
+
   for (uint8_t i = 0; i < num_tracks; ++i) {
     Track &track = tracks[i];
     bool first = true;
-#warning This is no good. Need to keep track of time in terms of tick in order for accurate track synchronization.
-    while (now > track.next_event_time || (now > 0xF0000000 && track.next_event_time < 0x10000000)) {
+    while (current_tick >= track.next_event_time) {
       if (first) {
         io.seek (track.trackpos);
         first = false;
@@ -256,9 +261,6 @@ void MIDIPlaybackFile::processEvents () {
     if (!first) {
       track.trackpos = io.position ();
       if (atEndOfTrack (track)) {  // if a track has finished playing, remove it.
-//char bufc[12];
-//cheap_itoa (bufc, num_tracks, 6);
-//display_detail ("tc", bufc);
         for (uint8_t j = i+1; j < num_tracks; ++j) {
           tracks[j-1] = tracks[j];
         }
@@ -270,15 +272,22 @@ void MIDIPlaybackFile::processEvents () {
 }
 
 bool MIDIPlaybackFile::doNextEvent (Track &track) {
+   // TODO: I'd really like to offload most of the parsing (well, apart from Meta events) to the midi library. However, trying to just sneak it into the MIDI input buffer not not seem to work (hangs)
+/*    midi_side_buffer.writeBuffer (in);
+    while (!MIDI.read ()) {
+      if (atEndOfTrack (track)) break;
+      midi_side_buffer.writeBuffer (io.read ());
+    } */
+
   byte in = io.read (); // This should be the command byte
-  while (!(in & 0x80)) { // But we got something else? Fast forward to the next elegible byte, and _try_ to make some sense from there.
-    // Which is not a really good strategy, either, as - contrary to a live stream - we will probably probably get screwed by a delta time, instead...
-    if (atEndOfTrack (track)) {
-      if (format2) handleTrackHeader (track);
-      return false;
-    }
-    in = io.read ();
+  if (!(in & 0x80)) { // Unless it's a running status. Whoever introduced that silly idea into the standard?
+    in = track.running_status;
+    io.seek (io.position () - 1);
+  } else {
+    track.running_status = in;
   }
+
+  // handle events
   if (in == 0xFF) {  // Meta event. we'll have to eat that, as the MIDI library does not handle it
     in = io.read ();
     if (in == 0x2F) {      // end of track
@@ -290,16 +299,13 @@ bool MIDIPlaybackFile::doNextEvent (Track &track) {
       io.read ();
       uint32_t micros_per_beat = ((uint32_t) io.read () << 16) + ((uint32_t) io.read () << 8) + (uint32_t) io.read ();
       micros_per_tick = micros_per_beat / ticks_per_beat;
-      //char bufc[12];
-      //cheap_itoa (bufc, micros_per_tick, 6);
-      //display_detail ("set mpt", bufc);
     } else if (in == 0x54) {  // SMPTE offset - handle like a delta time
       io.read ();
       // NOT correct! We assume millisecond ticks, here (frames and frame-fraction bits), which is not a bad guess, but no more than that.
-      track.next_event_time += (uint32_t) io.read () * 3600000000ul + (uint32_t) io.read () * 60000000ul + (uint32_t) io.read () * 1000000ul + (uint32_t) io.read ()*40ul + io.read ();
+      track.next_event_time += (uint32_t) io.read () * (3600000000ul / micros_per_tick) + (uint32_t) io.read () * (60000000ul / micros_per_tick) + (uint32_t) io.read () * (1000000ul / micros_per_tick) + (uint32_t) io.read ()*40ul + io.read ();
     } else {
       byte len = io.read ();
-      io.seek (io.position () + len);
+      io.seek (io.position () + (uint32_t) len);
     }
   } else if (in >= 0xF0) { // System events -- we'll just skip those
     if (in == 0xF0) {
@@ -315,14 +321,8 @@ bool MIDIPlaybackFile::doNextEvent (Track &track) {
     } else {
       // no further bytes to read
     }
+  // regular events
   } else {
-      // TODO: We should really offload the following to the MIDI library, by writing it to a fake in buffer.
-      // BUT why isn't this working (hangs)?
-/*    midi_side_buffer.writeBuffer (in);
-    while (!MIDI.read ()) {
-      if (atEndOfTrack (track)) break;
-      midi_side_buffer.writeBuffer (io.read ());
-    } */
     byte mtype = in & 0xF0;
     byte buf[16];
     byte pos = 0;
@@ -349,7 +349,7 @@ bool MIDIPlaybackFile::doNextEvent (Track &track) {
 
 void MIDIPlaybackFile::advance (Track &track) {
   if (!atEndOfTrack (track)) {
-    track.next_event_time += ticksToMicros (readVarLong ());
+    track.next_event_time += readVarLong ();
     track.trackpos = io.position ();
   }
   else if (format2 && io.available ()) handleTrackHeader (track);
@@ -366,8 +366,5 @@ uint32_t MIDIPlaybackFile::readVarLong () {
   return ret;
 }
 
-uint32_t MIDIPlaybackFile::nowTime () const {
-  return mozziMicros ();
-}
 
 

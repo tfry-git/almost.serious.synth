@@ -1,6 +1,9 @@
 # Almost Serious Synth, with - currently - 15 adjustable parameters, MIDI recording, and polyphony.
 
-The setup is mostly inspired by AMSynth (but adds some more complex wave forms). Based on the Mozzi sound synthesis library.
+- Based on the Mozzi sound synthesis library.
+- The Synth setup is mostly inspired by AMSynth (but adds some more complex wave forms).
+- Features MIDI playback (including Format 1) from SD card (but separate voices per channel not yet implemented)
+  and MIDI recording.
 
 ## Hardware
 - Written for and tested on an STM32F103C8T6 "blue pill". It should be easy to port to almost any other processor / board,
@@ -75,19 +78,18 @@ both easy to code, and (I think) easy to understand.
     equipping it with a voltage regulator of its own (I have not tried, yet)
   - When connecting the audio out to an amplifier (in particular a Class D amplifier), you will want to add a simple low pass filter to strip out the PWM carrier.
 - MIDI playback / recording
-  - Theoretically, the Synth can play back arbitrary Format 0 and Format 2 MIDI files - but that theory is not well tested.
-  - _Some_ format 1 files will play alright, but other will not play at all. Currently, I have no idea, why.
-  - The recorded MIDI is a valid format 0 file - again not much tested, though
+  - The Snyth will play back MIDI formats 0, 1, and 2 from SD card (so far all tracks in a same voice, however)
+  - The recorded MIDI is a valid format 0 file - playing it elsewhere is not tested, though
   - NoteOn and NoteOff are the only events handled, so far, but most events are recorded.
 
 ## Future directions
-Saving / loading of voices / MIDI files is still pretty clumsy. That needs improvments.
+Saving / loading of voices / MIDI files is still pretty clumsy. That needs improvements.
 
-MIDI recording could be enhanced a lot, to turn the Synth into a full MIDI sequencer. Minimally (long term), I'd like to be able to add simultaneous tracks to a MIDI redcording,
-and set separate voices for each track. The short term goal is to handle MIDI file format 1 (i.e. symultaneous tracks on file), correctly.
+One obviously useful extension will be to allow multi-track MIDI recordings (as we already support playing back multi-track MIDI files, the main trouble will be the UI), to turn
+the Synth into a full MIDI sequencer. To go along with that the ability to set separate voices for each track.
 
 There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
-"pages" of settings, or a larger display.
+"pages" of settings, or a larger display. (Ok, CPU power is approaching limits when many notes are played simultaneously, but for isolated notes, we could stack on a lot more).
 
 It may make sense to switch to larger IL9341 based TFT. One popular offering at the time of this writing - while twice the price of an SSD1306 display - sports a 240*320 resolution,
 includes an SD slot _and_ features a touch-screen, which could allow for a pretty intuitive UI. At any rate, the idea is to keep the project mostly modular, so it can be adjusted

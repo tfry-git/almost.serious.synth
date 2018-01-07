@@ -21,22 +21,21 @@ public:
     return (num_tracks == 0);
   }
 private:
-  uint32_t nowTime () const;
   /** Read a MIDI variable length entry from file. */
   uint32_t readVarLong ();
-  uint32_t ticksToMicros (uint32_t ticks) const {
-    return ticks * micros_per_tick;
-  }
   File io;
   uint32_t num_tracks;
   bool format2;
   uint32_t micros_per_tick;
   uint32_t ticks_per_beat;
+  uint32_t current_tick;
+  uint32_t current_tick_time;
 
   struct Track {
     uint32_t trackend;
     uint32_t trackpos;
     uint32_t next_event_time;
+    byte running_status;
   } tracks[MAX_MIDI_TRACKS];
   void handleTrackHeader (Track &track);
   inline bool atEndOfTrack (Track &track) {
