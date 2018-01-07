@@ -210,11 +210,10 @@ void MIDIPlaybackFile::load (File f) {
 
   for (uint8_t i = 0; i < num_tracks; ++i) {
     if (i > 0) {
-      io.seek (tracks[i-1].trackend + 1);
+      io.seek (tracks[i-1].trackend);
     }
     Track &track = tracks[i];
-    track.trackpos = io.position ();
-    track.trackend = io.size () - 1; // correct value will be set in handleTrackHeader, but we need an upper bound!
+    track.trackend = io.size (); // correct value will be set in handleTrackHeader, but we need an upper bound!
     track.next_event_time = now;
     handleTrackHeader (track);
   }
@@ -245,6 +244,7 @@ void MIDIPlaybackFile::processEvents () {
   for (uint8_t i = 0; i < num_tracks; ++i) {
     Track &track = tracks[i];
     bool first = true;
+#warning This is no good. Need to keep track of time in terms of tick in order for accurate track synchronization.
     while (now > track.next_event_time || (now > 0xF0000000 && track.next_event_time < 0x10000000)) {
       if (first) {
         io.seek (track.trackpos);

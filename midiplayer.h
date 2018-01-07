@@ -40,7 +40,7 @@ private:
   } tracks[MAX_MIDI_TRACKS];
   void handleTrackHeader (Track &track);
   inline bool atEndOfTrack (Track &track) {
-    return (io.position () > track.trackend);
+    return (io.position () >= track.trackend);
   }
   bool doNextEvent (Track &track);
   void advance (Track &track);
