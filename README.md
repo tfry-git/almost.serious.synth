@@ -70,7 +70,8 @@ both easy to code, and (I think) easy to understand.
 - The Synth is - technically - 12 note polyphnic by default (easily adjustable via a compile time define), but when really playing 12 simultaneous notes, and in particular when playing
   many simultaneous notes via some of the more CPU intensive effects enabled (such as Frequency modulation), you may start hearing "clicks" in the audio output, corresponding to
   buffer underruns.
-  - Preliminary debugging suggests the bottleneck is in updateAudio()
+  - Preliminary debugging suggests that the largest consumer of CPU power is updateAudio (35-45% of CPU at 32768Hz audio rate, and twelve notes playing),
+    but a large part of the problem is IO delays inside updateControl(). Use the DO_PROFILE define in the main source to get some numbers for tuning.
 - While adjusting settings or navigating the menu, audio will be severely disrupted. This is due to the fact that the I2C communication used with the display is synchronous (i.e. blocking).
 - This is all a work in progess. Some things _will_ break with an update, but I'll try not to break things, badly.
 - Some additional circuitry may be needed to get rid of noise. Two notes here:
@@ -79,6 +80,8 @@ both easy to code, and (I think) easy to understand.
   - When connecting the audio out to an amplifier (in particular a Class D amplifier), you will want to add a simple low pass filter to strip out the PWM carrier.
 - MIDI playback / recording
   - The Snyth will play back MIDI formats 0, 1, and 2 from SD card (so far all tracks in a same voice, however)
+  - When playing back format 1, you are likely to get a lot of clicks. This _likely_ due to the fact that we are frequently skipping between tracks (= positions in the file).
+    _Possibly_ this could be enhanced by keeping smallish read buffers per track. Alernatively, of course, the whole file could be converted to sequential / format 0 before playback.
   - The recorded MIDI is a valid format 0 file - playing it elsewhere is not tested, though
   - NoteOn and NoteOff are the only events handled, so far, but most events are recorded.
 

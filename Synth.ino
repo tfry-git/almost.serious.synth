@@ -77,6 +77,50 @@ struct Note {
 };
 Note notes[NOTECOUNT];
 
+//#define DO_PROFILE  // Do timings of updateAudio() and updateControL(), without actually running anything
+#ifdef DO_PROFILE
+int16_t asyncAnalogRead (uint8_t pin) {
+  return analogRead (pin);  // a convenient lie for profiling, assuming analogRead does not make up a huge amount of the timing
+}
+volatile int do_profile_dummy; // Avoid compiler optimizations
+void do_profile () {
+  uint32_t oldt = millis ();
+  for (uint32_t i = 0; i < AUDIO_RATE << 2; ++i) {
+    do_profile_dummy += updateAudio ();
+  }
+  uint32_t elapsed = millis () - oldt;
+  char bufc[12];
+  cheap_itoa (bufc, elapsed >> 2, 8);
+  display_detail ("1 Audio sek:", bufc);  // number of milliseconds needed for 1 second worth of the audio loop
+  delay (1000);
+
+  oldt = millis ();
+  for (uint32_t i = 0; i < CONTROL_RATE << 2; ++i) {
+    do_profile_dummy++;
+    updateControl ();
+  }
+  elapsed = millis () - oldt;
+  cheap_itoa (bufc, elapsed >> 2, 8);
+  display_detail ("1 Control sek:", bufc);  // number of milliseconds needed for 1 second worth of the control loop
+  delay (1000);
+
+  oldt = millis ();
+  for (uint32_t i = 0; i < 10000ul; ++i) {
+    do_profile_dummy++;
+    MyHandleNoteOn (0, (i+NOTECOUNT) % 50 + 40, 100);
+    MyHandleNoteOff (0, i % 50 + 40, 100);
+  }
+  elapsed = millis () - oldt;
+  cheap_itoa (bufc, elapsed / 10, 8);
+  display_detail ("1000 notes:", bufc);  // number of milliseconds needed to handle 1000 note on and 1000 note off events
+  delay (1000);
+}
+#else
+int16_t asyncAnalogRead (uint8_t pin) {
+  return mozziAnalogRead (pin);
+}
+#endif
+
 void setup() {
   pinMode (LED_BUILTIN, OUTPUT);
   setup_display ();
@@ -100,9 +144,13 @@ void setup() {
   UIPage::setCurrentPage(UIPage::SynthSettingsPage1);
   player.playRandom ();
 
+#ifdef DO_PROFILE
+  do_profile ();
+#else
   display_detail ("Starting:", "Mozzi");
   startMozzi(CONTROL_RATE);
   display_detail ("Startup", "complete");
+#endif
 }
 
 // Update parameters of the given notes. Usually either called with a single note, or all notes at once.
@@ -138,7 +186,9 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
 }
 
 void updateControl() {
+//  uint8_t buf1 = bufferedSamples ();
   player.update ();
+//  digitalWrite (PC13, buf1 - bufferedSamples () < 100);
 
   UIPage::currentPage ()->handleButton (keypad.read ());
   UIPage::currentPage ()->handleUpDown (read_updown ());
@@ -150,7 +200,9 @@ void updateControl() {
 
   for (byte i = 0; i < NOTECOUNT; ++i) {
     Note &note = notes[i];
+#if not defined (DO_PROFILE)
     if (!note.isPlaying()) continue;
+#endif
     note.env.update ();
     note.current_vol = note.env.next () * note.velocity >> 8;
 
@@ -175,15 +227,22 @@ void updateControl() {
   }
 }
 
-int updateAudio(){
+int16_t updateAudio(){
   int ret = 0;
   for (byte i = 0; i < NOTECOUNT; ++i) {
     Note &note = notes[i];
+#if not defined (DO_PROFILE)
     if (!note.isPlaying ()) continue;
+#endif
     // Step 1: Mix waveforms
     int8_t unfiltered = ((int32_t) note.oscil2.next() * note.osc2_mag + (int32_t) note.oscil.next() * (255u - note.osc2_mag)) >> 8; // LPF filter only takes 8 bits as input
     // Step 2: Apply lowpass
-    int32_t filtered = (int32_t) note.lpf.next(unfiltered) * note.lpf_amp + (255u-note.lpf_amp) * unfiltered;
+    int32_t filtered;
+    if (note.lpf_amp) {
+      filtered = (int32_t) note.lpf.next(unfiltered) * note.lpf_amp + (255u-note.lpf_amp) * unfiltered;
+    } else {
+      filtered = unfiltered << 8;
+    }
     // Step 3: Apply envelope and add to output
     ret += (int32_t) note.current_vol * filtered >> 14;
   }
