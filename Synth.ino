@@ -116,8 +116,8 @@ void do_profile () {
     MyHandleNoteOff (0, i % 50 + 40, 100);
   }
   elapsed = millis () - oldt;
-  cheap_itoa (bufc, elapsed / 10, 8);
-  display_detail ("1000 notes:", bufc);  // number of milliseconds needed to handle 1000 note on and 1000 note off events
+  cheap_itoa (bufc, elapsed, 8);
+  display_detail ("10000 notes:", bufc);  // number of milliseconds needed to handle 1000 note on and 1000 note off events
   delay (1000);
 
   oldt = millis ();
@@ -135,8 +135,8 @@ void do_profile () {
       do_profile_dummy += f.read ();
     }
     elapsed = millis () - oldt;
-    cheap_itoa (bufc, elapsed / 10, 8);
-    display_detail ("1000 con.reads:", bufc);  // number of milliseconds needed for 1000 mostly consequtive SD reads
+    cheap_itoa (bufc, elapsed, 8);
+    display_detail ("10000 con.reads:", bufc);  // number of milliseconds needed for 10000 mostly consequtive SD reads
     delay (1000);
 
     for (uint32_t i = 0; i < 10000ul; ++i) {
@@ -144,8 +144,8 @@ void do_profile () {
       do_profile_dummy += f.read ();
     }
     elapsed = millis () - oldt;
-    cheap_itoa (bufc, elapsed / 10, 8);
-    display_detail ("1000 rnd.reads:", bufc);  // number of milliseconds needed for 1000 mostly "random" SD reads
+    cheap_itoa (bufc, elapsed, 8);
+    display_detail ("10000 rnd.reads:", bufc);  // number of milliseconds needed for 10000 mostly "random" SD reads
     delay (1000);
   }
 }

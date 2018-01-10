@@ -7,10 +7,15 @@
 #include "display.h"
 
 bool SD_storage_available = false;
+#ifdef USE_SDFAT
+SdFat SD(2);
+#endif
 
 void setup_storage () {
+#ifndef USE_SDFAT
   SPI.setModule (2);
   SPI.setClockDivider(SPI_CLOCK_DIV2);
+#endif
   if (!SD.begin(PB12)) {
     display_detail ("SD init fail", ":-(");
     delay (1000);

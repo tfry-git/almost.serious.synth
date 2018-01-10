@@ -60,6 +60,9 @@ private:
   File dir;
   File entry;
   void (*callback) (const char*);
+#ifdef USE_SDFAT
+  char filenamebuf[13];
+#endif
   int16_t pos;
 };
 
