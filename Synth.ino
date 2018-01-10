@@ -82,11 +82,16 @@ Note notes[NOTECOUNT];
 int16_t asyncAnalogRead (uint8_t pin) {
   return analogRead (pin);  // a convenient lie for profiling, assuming analogRead does not make up a huge amount of the timing
 }
-volatile int do_profile_dummy; // Avoid compiler optimizations
+#include <CircularBuffer.h>
+#include "storage.h"
+volatile int16_t do_profile_dummy; // Avoid compiler optimizations
 void do_profile () {
+  CircularBuffer<int> buffer;
   uint32_t oldt = millis ();
   for (uint32_t i = 0; i < AUDIO_RATE << 2; ++i) {
-    do_profile_dummy += updateAudio ();
+    do_profile_dummy = updateAudio ();
+    buffer.write (do_profile_dummy);
+    do_profile_dummy = buffer.read ();
   }
   uint32_t elapsed = millis () - oldt;
   char bufc[12];
@@ -114,6 +119,35 @@ void do_profile () {
   cheap_itoa (bufc, elapsed / 10, 8);
   display_detail ("1000 notes:", bufc);  // number of milliseconds needed to handle 1000 note on and 1000 note off events
   delay (1000);
+
+  oldt = millis ();
+  File dir = openMidiDirectory ();
+  File f;
+  while (dir && (f = dir.openNextFile ())) {
+    if (f.size () >= 5000) break;
+  }
+  if (dir) dir.close ();
+  if (f && f.size () > 5000) {
+    for (uint32_t i = 0; i < 10000ul; ++i) {
+      if (!i % 5000) {
+        f.seek (0);
+      }
+      do_profile_dummy += f.read ();
+    }
+    elapsed = millis () - oldt;
+    cheap_itoa (bufc, elapsed / 10, 8);
+    display_detail ("1000 con.reads:", bufc);  // number of milliseconds needed for 1000 mostly consequtive SD reads
+    delay (1000);
+
+    for (uint32_t i = 0; i < 10000ul; ++i) {
+      f.seek ((i * 967 % 5000));
+      do_profile_dummy += f.read ();
+    }
+    elapsed = millis () - oldt;
+    cheap_itoa (bufc, elapsed / 10, 8);
+    display_detail ("1000 rnd.reads:", bufc);  // number of milliseconds needed for 1000 mostly "random" SD reads
+    delay (1000);
+  }
 }
 #else
 int16_t asyncAnalogRead (uint8_t pin) {
@@ -227,7 +261,7 @@ void updateControl() {
   }
 }
 
-int16_t updateAudio(){
+int updateAudio(){
   int ret = 0;
   for (byte i = 0; i < NOTECOUNT; ++i) {
     Note &note = notes[i];
