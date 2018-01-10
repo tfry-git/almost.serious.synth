@@ -120,7 +120,6 @@ void do_profile () {
   display_detail ("10000 notes:", bufc);  // number of milliseconds needed to handle 1000 note on and 1000 note off events
   delay (1000);
 
-  oldt = millis ();
   File dir = openMidiDirectory ();
   File f;
   while (dir && (f = dir.openNextFile ())) {
@@ -128,6 +127,7 @@ void do_profile () {
   }
   if (dir) dir.close ();
   if (f && f.size () > 5000) {
+    oldt = millis ();
     for (uint32_t i = 0; i < 10000ul; ++i) {
       if (!i % 5000) {
         f.seek (0);
@@ -139,6 +139,7 @@ void do_profile () {
     display_detail ("10000 con.reads:", bufc);  // number of milliseconds needed for 10000 mostly consequtive SD reads
     delay (1000);
 
+    oldt = millis ();
     for (uint32_t i = 0; i < 10000ul; ++i) {
       f.seek ((i * 967 % 5000));
       do_profile_dummy += f.read ();
