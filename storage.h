@@ -18,5 +18,8 @@ File openVoiceDirectory ();
 File openVoiceFile (const char *name);
 File openMidiFile (const char *name);
 
+/** Get name of the given file. The buffer returned _will be reused_ valid, only until called, again. */
+char *getFileName (File &file);
+
 #endif
 

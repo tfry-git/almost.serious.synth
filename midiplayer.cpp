@@ -63,7 +63,7 @@ void MIDIPlayer::play (const char *file) {
   } else {
     io = openMidiFile (file);
   }
-  display_detail ("Playing", io.name ());
+  display_detail ("Playing", getFileName (io));
   infile.load (io);
 }
   
@@ -209,15 +209,17 @@ void MIDIPlaybackFile::load (File f) {
 
   for (uint8_t i = 0; i < num_tracks; ++i) {
     if (i > 0) {
-      io.seek (tracks[i-1].trackend);
+      io.seek (tracks[i-1].ioend);
     }
     Track &track = tracks[i];
     track.running_status = 0;
-    track.trackend = io.size (); // correct value will be set in handleTrackHeader, but we need an upper bound!
+    track.ioend = io.size () - 1; // correct value will be set in handleTrackHeader, but we need an upper bound!
+    track.iopos = io.position ();
+    track.buflen = 0;
+    track.bufpos = 0;
     track.next_event_time = 0;
     handleTrackHeader (track);
   }
-  io.seek (tracks[0].trackpos);
 
   current_tick = 0;
   current_tick_time = mozziMicros ();
@@ -225,19 +227,21 @@ void MIDIPlaybackFile::load (File f) {
 
 void MIDIPlaybackFile::handleTrackHeader (Track &track) {
 
-  if (io.available () >= 8) {
+  if (available (track) >= 8) {
     byte buf[8];
-    io.read (buf, 8);
+    for (int i = 0; i < 8; ++i) buf[i] = read (track);
     if (buf[0] == 'M' && buf[1] == 'T' && buf[2] == 'r' && buf[3] == 'k') {  // MIDI track
-      track.trackend = io.position () + ((uint32_t) buf[4] << 24) + ((uint32_t) buf[5] << 16) + ((uint32_t) buf[6] << 8) + (uint32_t) buf[7];
+      track.ioend = position (track) + ((uint32_t) buf[4] << 24) + ((uint32_t) buf[5] << 16) + ((uint32_t) buf[6] << 8) + (uint32_t) buf[7];
     } else {
-      io.seek (io.position () - 8); // go back, and try to interpret as naked event stream
-      track.trackend = io.size () - 1;
+      // go back, and try to interpret as naked event stream (unfortunately that includes discarding the buffer, but _should_ not happen on valid MIDI files
+      track.iopos = position (track) - 8;
+      track.ioend = io.size () - 1;
+      track.buflen = 0;
+      track.bufpos = 0;
     }
   } else {
-    track.trackend = io.size () - 1;
+    track.ioend = io.size () - 1;
   }
-  track.trackpos = io.position ();
 
   advance (track);
 }
@@ -247,25 +251,32 @@ void MIDIPlaybackFile::processEvents () {
   current_tick += elapsed_ticks;
   current_tick_time += elapsed_ticks * micros_per_tick;  // not simply using "now", as we might be half-way into the next tick
 
+  bool any_event = false; // TODO: REMOVE ME: temporary same loop buffer refill strategy
   for (uint8_t i = 0; i < num_tracks; ++i) {
     Track &track = tracks[i];
     bool first = true;
     while (current_tick >= track.next_event_time) {
-      if (first) {
-        io.seek (track.trackpos);
-        first = false;
-      }
+      first = false;
       if (atEndOfTrack (track)) break;
       if (!doNextEvent (track)) break;
     }
     if (!first) {
-      track.trackpos = io.position ();
+      any_event = true;
       if (atEndOfTrack (track)) {  // if a track has finished playing, remove it.
         for (uint8_t j = i+1; j < num_tracks; ++j) {
           tracks[j-1] = tracks[j];
         }
         --num_tracks;
         --i;
+      }
+    }
+  }
+  if (!any_event) {
+    for (uint8_t i = 0; i < num_tracks; ++i) {
+      Track &track = tracks[i];
+      if (available (track) < (MIDI_TRACK_BUFSIZE / 2)) {
+        fillBuffer (track);
+        break;
       }
     }
   }
@@ -279,45 +290,51 @@ bool MIDIPlaybackFile::doNextEvent (Track &track) {
       midi_side_buffer.writeBuffer (io.read ());
     } */
 
-  byte in = io.read (); // This should be the command byte
+  byte in = peek (track);  // This should be the command byte
   if (!(in & 0x80)) { // Unless it's a running status. Whoever introduced that silly idea into the standard?
     in = track.running_status;
-    io.seek (io.position () - 1);
   } else {
+    in = read (track);
     track.running_status = in;
   }
 
   // handle events
   if (in == 0xFF) {  // Meta event. we'll have to eat that, as the MIDI library does not handle it
-    in = io.read ();
+    in = read (track);
     if (in == 0x2F) {      // end of track
-      track.trackend = io.position ();
-      io.read ();
-      if (format2) handleTrackHeader (track);
+      read (track);
+      if (format2) {
+        track.ioend = io.size () - 1;
+        handleTrackHeader (track);
+      } else {
+        track.ioend = position (track);
+      }
       return false;
     } else if (in == 0x51) {   // set tempo
-      io.read ();
-      uint32_t micros_per_beat = ((uint32_t) io.read () << 16) + ((uint32_t) io.read () << 8) + (uint32_t) io.read ();
+      read (track);
+      uint32_t micros_per_beat = ((uint32_t) read (track) << 16) + ((uint32_t) read (track) << 8) + (uint32_t) read (track);
       micros_per_tick = micros_per_beat / ticks_per_beat;
     } else if (in == 0x54) {  // SMPTE offset - handle like a delta time
-      io.read ();
+      read (track);
       // NOT correct! We assume millisecond ticks, here (frames and frame-fraction bits), which is not a bad guess, but no more than that.
-      track.next_event_time += (uint32_t) io.read () * (3600000000ul / micros_per_tick) + (uint32_t) io.read () * (60000000ul / micros_per_tick) + (uint32_t) io.read () * (1000000ul / micros_per_tick) + (uint32_t) io.read ()*40ul + io.read ();
+      track.next_event_time += (uint32_t) read (track) * (3600000000ul / micros_per_tick) + (uint32_t) read (track) * (60000000ul / micros_per_tick) + (uint32_t) read (track) * (1000000ul / micros_per_tick) + (uint32_t) read (track)*40ul + read (track);
     } else {
-      byte len = io.read ();
-      io.seek (io.position () + (uint32_t) len);
+      byte len = read (track);
+      for (byte i = 0; i < len; ++i) {
+        read (track); // actually, all we want to do is skip, but probably not worth optimizing this.
+      }
     }
   } else if (in >= 0xF0) { // System events -- we'll just skip those
     if (in == 0xF0) {
-      byte in = io.read (); // skip vendor byte
-      while ((in = io.read ()) != 0xF7) { // look for termination byte
+      byte in = read (track); // skip vendor byte
+      while ((in = read (track)) != 0xF7) { // look for termination byte
         if (atEndOfTrack (track)) break;
       }
     } else if (in == 0xF2) {
-      io.read ();
-      io.read ();
+      read (track);
+      read (track);
     } else if (in == 0xF3) {
-      io.read ();
+      read (track);
     } else {
       // no further bytes to read
     }
@@ -330,7 +347,7 @@ bool MIDIPlaybackFile::doNextEvent (Track &track) {
     while (++pos < MidiMessageLength (mtype)) { // read all data bytes
       // NOTE: To handle playback of (almost) universal MIDI files, we we will have to a) handle the header, and b) handle/skip over META events (mtype 0xFF)
       // for now, we're just playing back what we record, while keeping the storage format close to the MIDI specs.
-      buf[pos] = io.read ();
+      buf[pos] = read (track);
     }
     switch (mtype) {
       case midi::NoteOn:
@@ -347,24 +364,44 @@ bool MIDIPlaybackFile::doNextEvent (Track &track) {
   return true;
 }
 
+byte MIDIPlaybackFile::read (Track &track) {
+  if (!track.buflen) fillBuffer (track);
+//  if (!track.buflen) return -1;
+  --track.buflen;
+
+  if (++track.bufpos >= MIDI_TRACK_BUFSIZE) track.bufpos = 0;
+  return track.iobuf[track.bufpos];
+}
+
+byte MIDIPlaybackFile::peek (Track &track) {
+  if (!track.buflen) fillBuffer (track);
+  return track.iobuf[(track.bufpos + 1) % MIDI_TRACK_BUFSIZE];
+}
+
+void MIDIPlaybackFile::fillBuffer (Track &track) {
+  uint8_t from = (track.bufpos + track.buflen + 1) % MIDI_TRACK_BUFSIZE;
+  uint8_t to = ((from < track.bufpos) ? track.bufpos : MIDI_TRACK_BUFSIZE) - 1;
+  if (io.position () != track.iopos) io.seek (track.iopos);
+  uint8_t len = io.read (&track.iobuf[from], to - from + 1);
+  track.iopos += len;
+  track.buflen += len;
+}
+
 void MIDIPlaybackFile::advance (Track &track) {
   if (!atEndOfTrack (track)) {
-    track.next_event_time += readVarLong ();
-    track.trackpos = io.position ();
+    track.next_event_time += readVarLong (track);
   }
   else if (format2 && io.available ()) handleTrackHeader (track);
 }
 
-uint32_t MIDIPlaybackFile::readVarLong () {
+uint32_t MIDIPlaybackFile::readVarLong (Track &track) {
   byte in;
   uint32_t ret = 0;
   byte pos = 0;
   do {
-    in = io.read ();
+    in = read (track);
     ret = (ret << 7) + (in & 0x7F);
   } while ((in & 0x80) && (++pos < 4)); // The length check may seem overcautious on first glance, but on end of file, io.read() will return -1, i.e. always have the 0x80 bit.
   return ret;
 }
-
-
 

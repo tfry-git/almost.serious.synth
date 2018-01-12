@@ -68,7 +68,7 @@ both easy to code, and (I think) easy to understand.
 
 ## Limitations and notes
 - The Synth is - technically - 12 note polyphnic by default (easily adjustable via a compile time define), but when really playing 12 simultaneous notes, and in particular when playing
-  many simultaneous notes via some of the more CPU intensive effects enabled (such as Frequency modulation), you may start hearing choppes audio or "clicks" in the audio output, corresponding to
+  many simultaneous notes via some of the more CPU intensive effects enabled (such as Frequency modulation), you may start hearing chopped audio or "clicks" in the audio output, corresponding to
   buffer underruns.
   - Preliminary debugging suggests that the largest consumer of CPU power is updateAudio (35-45% of CPU at 32768Hz audio rate, and twelve notes playing),
     but a large part of the problem is IO delays inside updateControl(). Use the DO_PROFILE define in the main source to get some numbers for tuning.
@@ -80,8 +80,9 @@ both easy to code, and (I think) easy to understand.
   - When connecting the audio out to an amplifier (in particular a Class D amplifier), you will want to add a simple low pass filter to strip out the PWM carrier.
 - MIDI playback / recording
   - The Snyth will play back MIDI formats 0, 1, and 2 from SD card (so far all tracks in a same voice, however)
-  - When playing back format 1, you are likely to get a lot of chopping. This is _likely_ due to the fact that we are frequently skipping between tracks (= positions in the file).
-    _Possibly_ this could be enhanced by keeping smallish read buffers per track. Alernatively, of course, the whole file could be converted to sequential / format 0 before playback.
+  - Should you find complex MIDI format 1 files play - mostly - ok, but with lag or chopping, the most likely cause is lack of IO performance. You can improve this, significantly,
+    by using Bill Greimans SdFat library (https://github.com/greiman/SdFat) instead of the "default" Arduion SD library. Uncomment the "#define USE_SDFAT" in storage.h to
+    enable the SdFat library.
   - The recorded MIDI is a valid format 0 file - playing it elsewhere is not tested, though
   - NoteOn and NoteOff are the only events handled, so far, but most events are recorded.
 

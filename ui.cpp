@@ -173,12 +173,7 @@ void SelectFilePage::initDisplay () {
       display_icon (i, 3, "", "--------", false);
     } else {
       display_button (i, 0, "Load");
-#ifdef USE_SDFAT
-      entry.getName (filenamebuf, 13);
-      display_icon (i, 3, "", filenamebuf, false);
-#else
-      display_icon (i, 3, "", entry.name (), false);
-#endif
+      display_icon (i, 3, "", getFileName (entry), false);
       entry.close ();
     }
     entry = dir.openNextFile ();
@@ -206,12 +201,7 @@ void SelectFilePage::handleButton (int8_t but) {
       entry = dir.openNextFile ();  // skip files, after scrolling
     }
     dir.close ();
-#ifdef USE_SDFAT
-    entry.getName (filenamebuf, 13);
-    callback (filenamebuf);
-#else
-    callback (entry.name ());
-#endif
+    callback (getFileName (entry));
   } else if (but % 4 == 3) {
     dir.close ();
     callback ("");

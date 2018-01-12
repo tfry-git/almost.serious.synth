@@ -7,6 +7,7 @@ void MyHandleNoteOn (byte channel, byte pitch, byte velocity);
 void MyHandleNoteOff(byte channel, byte pitch, byte velocity);
 
 #define MAX_MIDI_TRACKS 16u  // for now we use static allocation of MIDI tracks (for format 1 playback). NOTE this is track _per_ file
+#define MIDI_TRACK_BUFSIZE 64u  // NOTE: uint8_t indexed: Max 256; powers of two, please. Also note: RAM usage multiplies with number of tracks
 
 /** Wraps a MIDI file to be played back. Importantly, it takes care of parsing (well - mostly skipping, for now) the file
  *  header and track headers.
@@ -21,8 +22,6 @@ public:
     return (num_tracks == 0);
   }
 private:
-  /** Read a MIDI variable length entry from file. */
-  uint32_t readVarLong ();
   File io;
   uint32_t num_tracks;
   bool format2;
@@ -32,17 +31,33 @@ private:
   uint32_t current_tick_time;
 
   struct Track {
-    uint32_t trackend;
-    uint32_t trackpos;
+    uint32_t ioend;  // end of track in file coordinates
+    uint32_t iopos;  // position of the next _buffer_ read in file coordinates. You're probably looking for MIDIPlaybackFile::position(), instead.
     uint32_t next_event_time;
-    byte running_status;
+    byte iobuf[MIDI_TRACK_BUFSIZE]; // io buffer
+    uint8_t bufpos;  // position inside the io buffer. Indicates the byte that has last been read, i.e. next read is a bufpos + 1
+    uint8_t buflen;  // number of byts left in the io buffer
+    byte running_status;  // MIDI running status byte
   } tracks[MAX_MIDI_TRACKS];
+
+  byte read (Track &track);
+  byte peek (Track &track);
+  inline uint32_t position (Track &track) {
+    return (track.iopos - track.buflen);
+  }
+  inline uint32_t available (Track &track) {
+    return (track.ioend - position (track));
+  }
+  void fillBuffer (Track &track);
+
   void handleTrackHeader (Track &track);
   inline bool atEndOfTrack (Track &track) {
-    return (io.position () >= track.trackend);
+    return (position (track) >= track.ioend);
   }
   bool doNextEvent (Track &track);
   void advance (Track &track);
+  /** Read a MIDI variable length entry from file. */
+  uint32_t readVarLong (Track &track);
 };
 
 /** This class is meant to handle recording and playback of MIDI events. */

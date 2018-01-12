@@ -77,3 +77,13 @@ File openMidiFile (const char* name) {
   return SD.open(buf, FILE_WRITE);
 }
 
+char getname_buf[13];
+char *getFileName (File &file) {
+#ifdef USE_SDFAT
+  file.getName (getname_buf, 13);
+#else
+  strcpy (getname_buf, file.name ());
+#endif
+  return getname_buf;
+}
+
