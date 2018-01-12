@@ -42,7 +42,7 @@ File openVoiceFile (const char* name) {
     dir.close ();
     if (!dummy) return File ();
     strcat (buf, "/");
-    strcat (buf, dummy.name ());
+    strcat (buf, getFileName (dummy));
     dummy.close ();
     return SD.open(buf, FILE_WRITE);
   } else {

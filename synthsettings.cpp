@@ -45,9 +45,9 @@ void saveVoice (const char *name) {
     f.write ((byte) (val >> 8));
     f.write ((byte) (val & 0xFF));
   }
-  f.close ();
   UIPage::setCurrentPage (UIPage::SynthSettingsPage1);
-  display_detail ("Saved voice", f.name ());
+  display_detail ("Saved voice", getFileName (f));
+  f.close ();
 }
 
 void loadVoice (const char* name) {
@@ -58,8 +58,8 @@ void loadVoice (const char* name) {
   for (int i = 0; i < len; ++i) {
     settings[i].value = (buf[i*2] << 8) | buf[i*2+1];
   }
-  f.close ();
   UIPage::setCurrentPage (UIPage::SynthSettingsPage1);
-  display_detail ("Loaded voice", f.name ());
+  display_detail ("Loaded voice", getFileName (f));
+  f.close ();
 }
 
