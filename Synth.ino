@@ -77,7 +77,7 @@ struct Note {
 };
 Note notes[NOTECOUNT];
 
-#define DO_PROFILE  // Do timings of updateAudio() and updateControL(), without actually running anything
+//#define DO_PROFILE  // Do timings of updateAudio() and updateControL(), without actually running anything
 #ifdef DO_PROFILE
 int16_t asyncAnalogRead (uint8_t pin) {
   return analogRead (pin);  // a convenient lie for profiling, assuming analogRead does not make up a huge amount of the timing

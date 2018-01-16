@@ -85,18 +85,22 @@ public:
       a = true;
       oa.setTable (WAVE_TABLES[table_num]);
     }
-    phaseMod = 0;
+    phase_mod = 0;
   }
   inline int8_t next () {
     if (!shaper) {
-      if (a) return (oa.phMod (phaseMod));
-      else return (ob.phMod (phaseMod));
+      if (a) return (oa.next ());
+      else return (ob.next ());
     }
-    if (a) return (shaper->next (oa.phMod (phaseMod)));
-    else return (shaper->next (ob.phMod (phaseMod)));
+    if (a) return (shaper->next (oa.next ()));
+    else return (shaper->next (ob.next ()));
   }
-  inline void setPhaseModulation (Q15n16 mod) {
-    phaseMod = mod;
+  void setPhaseModulation (int16_t mod) {
+    uint32_t phasepos = a ? oa.getPhaseFractional () : ob.getPhaseFractional ();
+    phasepos += ((int32_t) (mod - phase_mod)) << 8;
+    phase_mod = mod;
+    if (a) oa.setPhaseFractional (phasepos);
+    else ob.setPhaseFractional (phasepos);
   }
   uint32_t tableSize () {
     if (a) return TABLE_SIZE_A;
@@ -104,8 +108,8 @@ public:
   }
   bool a = true;
   int8_t table_num = 0;
+  int16_t phase_mod = 0;
   WaveShaper<char>* shaper = NULL;
-  Q15n16 phaseMod = 0;
 };
 
 #endif
