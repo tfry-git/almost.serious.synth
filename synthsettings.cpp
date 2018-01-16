@@ -11,7 +11,7 @@ const char* Setting::displayValue() {
   return printf_buf;
 }
 
-const char* EFFECTS[] = {"LPFC", "LPFR", "LPFA", "OMix", "O1Fr", "Freq"};
+const char* EFFECTS[] = {"LPFC", "LPFR", "LPFA", "OMix", "O1Fr", "Freq", "O1Ph", "Phse"};
 Setting settings[SETTINGS_COUNT] = {
   {"Attack (ms)", "A", 0, 100, 10000, 5, NULL},
   {"Decay (ms)", "D", 0, 100, 10000, 5, NULL},
@@ -24,7 +24,7 @@ Setting settings[SETTINGS_COUNT] = {
   {"LFO Waveform", "W", 0, 1, NUM_WAVEFORMS-1, 100, TABLE_NAMES},
   {"LF0 Freq * 200", "F", 1, 200, 16000, 5, NULL},
   {"LF0 Amp", "A", 0, 0, 255, 10, NULL},
-  {"LF0 Effect", "X", 0, 0, 5, 100, EFFECTS },
+  {"LF0 Effect", "X", 0, 0, 7, 100, EFFECTS },
   {"LPF Cutoff Freq", "C", 0, 100, 255, 10, NULL},
   {"LPF Resonance", "R", 0, 50, 170, 5, NULL},
   {"LPF Amp", "A", 0, 0, 255, 10, NULL},

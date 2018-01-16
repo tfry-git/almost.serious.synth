@@ -77,7 +77,7 @@ struct Note {
 };
 Note notes[NOTECOUNT];
 
-//#define DO_PROFILE  // Do timings of updateAudio() and updateControL(), without actually running anything
+#define DO_PROFILE  // Do timings of updateAudio() and updateControL(), without actually running anything
 #ifdef DO_PROFILE
 int16_t asyncAnalogRead (uint8_t pin) {
   return analogRead (pin);  // a convenient lie for profiling, assuming analogRead does not make up a huge amount of the timing
@@ -258,6 +258,11 @@ void updateControl() {
     } else if (settings[LFOEffectSetting].value == 5) {
       note.oscil.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc1_f_base) * ((1<<24) / ((1<<16) + lfo_effect))) >> 8);
       note.oscil2.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc2_f_base) * ((1<<24) / ((1<<16) + lfo_effect))) >> 8);
+    } else if (settings[LFOEffectSetting].value == 6) {
+      note.oscil.setPhaseModulation((Q15n16) lfo_effect);
+    } else if (settings[LFOEffectSetting].value == 7) {
+      note.oscil.setPhaseModulation((Q15n16) lfo_effect);
+      note.oscil2.setPhaseModulation((Q15n16) lfo_effect);
     }
   }
 }
