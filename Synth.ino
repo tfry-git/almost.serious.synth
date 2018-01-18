@@ -171,7 +171,7 @@ void setup() {
     notes[i].env.setADLevels(200,100);
     notes[i].env.setDecayTime(100);
     notes[i].env.setSustainTime(1000);
-    notes[i].effect_env.setADLevels(200,100);
+    notes[i].effect_env.setSustainTime(64000);
     notes[i].note = 0;
   }
 
@@ -203,8 +203,7 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
 
     note.effect_env.setAttackTime(settings[EffectAttackSetting].value);
     note.effect_env.setDecayTime(settings[EffectDecaySetting].value);
-    note.effect_env.setSustainTime(settings[EffectSustainSetting].value);
-    note.effect_env.setReleaseTime(settings[EffectReleaseSetting].value);
+    note.effect_env.setADLevels(settings[EffectAttackLevelSetting].value, settings[EffectDecayLevelSetting].value);
 
     note.oscil.setTableNum (settings[Osc1WaveFormSetting].value);
     note.oscil2.setTableNum (settings[Osc2WaveFormSetting].value);
@@ -251,11 +250,11 @@ void updateControl() {
     note.effect_env.update ();
     note.current_vol = note.env.next () * note.velocity >> 8;
 
-    int8_t effectenv_cur = note.effect_env.next ();
+    uint8_t effectenv_cur = note.effect_env.next ();
     int16_t effects[EFFECTS_COUNT] = {0};
-    effects[settings[EffectWhat1Setting].value] = effectenv_cur * settings[EffectAmp1Setting].value;
-    effects[settings[EffectWhat2Setting].value] += effectenv_cur * settings[EffectAmp2Setting].value;
-    effects[settings[LFOEffectSetting].value] += note.lfo.next()*(note.lfo_amp_base + (effects[LFOAmpEffect] / 256));
+    effects[settings[EffectWhat1Setting].value] = (int32_t) effectenv_cur * settings[EffectAmp1Setting].value / 2;
+    effects[settings[EffectWhat2Setting].value] += effectenv_cur * settings[EffectAmp2Setting].value / 2;
+    effects[settings[LFOEffectSetting].value] += (int32_t) note.lfo.next()*(note.lfo_amp_base + (effects[LFOAmpEffect] / 256));
 
     for (uint8_t i = 0; i < EFFECTS_COUNT; ++i) {
       // TODO: Applying all effects in each iteration is sort of wasteful, but profiling suggests that optimizations, here, are not a high priority.
@@ -285,9 +284,9 @@ void updateControl() {
       } else if (i == LFOFreqEffect) {
         if (IS_NOISE_TABLE(settings[LFOWaveFormSetting].value)) {
           // HACK: For LFO, noise waveform is best served _slow_
-          note.lfo.setFreq_Q16n16 ((Q16n16_to_Q24n8 (note.lfo_f_base) * ((1<<222) / ((1<<16) + effect_size))) >> 14);
+          note.lfo.setFreq_Q16n16 ((Q16n16_to_Q24n8 (note.lfo_f_base) * ((1<<24) / ((1<<16) + effect_size*2))) >> 16);  // NOTE: modulation effect intentionally larger for LFO than for main Oscillators
         } else {
-          note.lfo.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.lfo_f_base) * ((1<<22) / ((1<<16) + effect_size))) >> 6);
+          note.lfo.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.lfo_f_base) * ((1<<24) / ((1<<16) + effect_size*2))) >> 8);
         }
       } else {
         // LFO Amp modulation already handled outside the loop

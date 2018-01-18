@@ -37,7 +37,7 @@ SynthSettingsPage::SynthSettingsPage (uint8_t offset) {
 }
 
 void SynthSettingsPage::drawIconForSetting (uint8_t setting, bool active) {
-  if (setting == NothingSetting) {
+  if (setting - offset == NothingSetting) {
     display_button ((setting / 4) % 4, setting % 4, "Menu");
   } else {
     display_icon ((setting / 4) % 4, setting % 4, settings[setting].shortname, settings[setting].displayValue(), active);
@@ -45,7 +45,7 @@ void SynthSettingsPage::drawIconForSetting (uint8_t setting, bool active) {
 }
 
 void SynthSettingsPage::initDisplay () {
-  for (uint8_t i = offset; i < (offset + NothingSetting); ++i) {
+  for (uint8_t i = offset; i <= (offset + NothingSetting); ++i) {
     drawIconForSetting (i, i == current_setting);
   }
 }

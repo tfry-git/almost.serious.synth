@@ -38,9 +38,9 @@ enum Settings {
 
 // page 2
   EffectAttackSetting,
+  EffectAttackLevelSetting,
   EffectDecaySetting,
-  EffectSustainSetting,
-  EffectReleaseSetting,
+  EffectDecayLevelSetting,
 
   EffectAmp1Setting,
   EffectWhat1Setting,

@@ -31,9 +31,9 @@ Setting settings[SETTINGS_COUNT] = {
   {"Nothing", "-", 0, 0, 255, 10, NULL},
 
   {"Effect Attack", "A", 0, 1000, 32000, 5, NULL},
-  {"Effect Decay", "D", 0, 500, 32000, 5, NULL},
-  {"Effect Sustain", "S", 0, 0, 32000, 5, NULL},
-  {"Effect Release", "R", 0, 500, 32000, 5, NULL},
+  {"E. Attack Level", "L", 0, 255, 255, 10, NULL},
+  {"Effect Decay", "D", 0, 1000, 32000, 5, NULL},
+  {"E. Decay Level", "L", 0, 0, 255, 10, NULL},
   {"Effect Amp1", "A", -255, 0, 255, 10, NULL},
   {"Effect Target1", "X", 0, 0, EFFECTS_COUNT-1, 100, EFFECTS },
   {"Effect Amp2", "A", -255, 0, 255, 10, NULL},

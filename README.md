@@ -43,14 +43,14 @@ go the main menu, and select "Stop" (row 3, column 2). It will load the first sa
 - Top row: Envelope - Attack, Decay, Sustain, Release
 - Row 2: Wave mixing - Oscillator 1 waveform, Oscillator mix ratio, Oscillator 2 waveform, Oscillator 2 tune, given in half-tones above below Oscillator 1
 - Row 3: Low frequency oscillator: Waveform, Frequency, Amplitude (initially set to 0, i.e. disabled), Parameter to modulate
-- Bottom 4: Low pass filter: Cutoff frequency, Resonance, Amplitude (initially set to 0, i.e. unfiltered)
+- Bottom row: Low pass filter: Cutoff frequency, Resonance, Amplitude (initially set to 0, i.e. unfiltered)
 - Bottom - right button: Exit to main menu
 
 ## Synthesizer settings - Page 2
-- Top row: Envelope for the effects given in the next row - Attack, Decay, Sustain, Release
+- Top row: Envelope for the effects given in the next row - Attack time, Attack level, Decay time, Decay level (envelope will remain at decay level after the decay period)
 - Row 2: Two effects controlled by the above envelope, each with separate max amplitude ("A"), and effect target ("X")
 - Row 3: - Not yet used -
-- Bottom 4: - Not yet used -
+- Bottom row: - Not yet used -
 - Bottom - right button: Exit to main menu
 
 ## Main menu
@@ -101,9 +101,11 @@ the Synth into a full MIDI sequencer. To go along with that the ability to set s
 
 There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. Some ideas on _what_ to add:
 - Oscillator sync
-- More time based effects (line / phasor)
+- Ring mod
+- More time based effects (line / phasor) - but that may actually be overkill?
 - Reverb - but that needs lots of RAM
-- Filters other than LPF.
+- Filters other than LPF
+- Allow MIDI velocity to modify effects
 
 It may make sense to switch to larger IL9341 based TFT. One popular offering at the time of this writing - while twice the price of an SSD1306 display - sports a 240*320 resolution,
 includes an SD slot _and_ features a touch-screen, which could allow for a pretty intuitive UI. At any rate, the idea is to keep the project mostly modular, so it can be adjusted
