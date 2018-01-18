@@ -1,4 +1,4 @@
-/*  Almost Serious Synth, with - currently - 15 adjustable parameters, and polyphony.
+/*  Almost Serious Synth, with 20+ adjustable parameters, and polyphony.
  *
  *  See README.md for details and instructions.
  *  
@@ -69,11 +69,14 @@ struct Note {
   // NOTE: Here, I'm using separate LFOs for each note, but there's also a point to be made for keeping all LFOs in sync (i.e. a single global lfo).
   // The LFO will be used to modulate one of a number of parameters
   FlexOscil<CONTROL_RATE> lfo;
-  uint8_t lfo_amp;
+  int16_t lfo_amp_base;
+  Q16n16 lfo_f_base;
   LowPassFilter lpf;
   uint8_t lpf_cutoff_base;  // NOTE: If RAM gets really tight, we could remove some of those "base" caches, and utilitize the corresponding current setting value, instead.
   uint8_t lpf_resonance_base;
   uint8_t lpf_amp_base, lpf_amp;
+
+  ADSR<CONTROL_RATE, CONTROL_RATE> effect_env;
 };
 Note notes[NOTECOUNT];
 
@@ -168,6 +171,7 @@ void setup() {
     notes[i].env.setADLevels(200,100);
     notes[i].env.setDecayTime(100);
     notes[i].env.setSustainTime(1000);
+    notes[i].effect_env.setADLevels(200,100);
     notes[i].note = 0;
   }
 
@@ -197,6 +201,11 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
     note.env.setSustainTime(settings[SustainSetting].value);
     note.env.setReleaseTime(settings[ReleaseSetting].value);
 
+    note.effect_env.setAttackTime(settings[EffectAttackSetting].value);
+    note.effect_env.setDecayTime(settings[EffectDecaySetting].value);
+    note.effect_env.setSustainTime(settings[EffectSustainSetting].value);
+    note.effect_env.setReleaseTime(settings[EffectReleaseSetting].value);
+
     note.oscil.setTableNum (settings[Osc1WaveFormSetting].value);
     note.oscil2.setTableNum (settings[Osc2WaveFormSetting].value);
     note.osc2_f_base = Q16n16_mtof ((note.note + settings[Osc2FreqSetting].value) << 16);
@@ -204,13 +213,13 @@ void updateNotes (class Note *startnote, uint8_t num_notes) {
     note.osc2_mag = note.osc2_mag_base = settings[OscMixSetting].value;
 
     // LPF
-    note.lfo_amp = settings[LFOAmpSetting].value;
+    note.lfo_amp_base = settings[LFOAmpSetting].value;
     note.lfo.setTableNum (settings[LFOWaveFormSetting].value);
+    note.lfo_f_base = ((Q16n16) settings[LFOFreqSetting].value << 16) / 200;
     if (IS_NOISE_TABLE(settings[LFOWaveFormSetting].value)) {
-      // HACK: For LFO, noise waveform is best served _slow_
-      note.lfo.setFreq_Q16n16 (((Q16n16) settings[LFOFreqSetting].value << 16) / 10000);
+      note.lfo.setFreq_Q16n16 (note.lfo_f_base >> 8);
     } else {
-      note.lfo.setFreq_Q24n8 (((Q24n8) settings[LFOFreqSetting].value << 8) / 200);
+      note.lfo.setFreq_Q24n8 (Q16n16_to_Q24n8 (note.lfo_f_base));
     }
     note.lpf_resonance_base = settings[LPFResonanceSetting].value;
     note.lpf.setResonance (note.lpf_resonance_base);
@@ -239,30 +248,50 @@ void updateControl() {
     if (!note.isPlaying()) continue;
 #endif
     note.env.update ();
+    note.effect_env.update ();
     note.current_vol = note.env.next () * note.velocity >> 8;
 
-    int16_t lfo_effect = note.lfo.next()*note.lfo_amp;
-    if (settings[LFOEffectSetting].value == 0) {
-      note.lpf.setCutoffFreq(u8ranged (note.lpf_cutoff_base+(lfo_effect >> 8)));
-    } else if (settings[LFOEffectSetting].value == 1) {
-      note.lpf.setResonance(u8ranged (note.lpf_resonance_base+(lfo_effect >> 9)));
-    } else if (settings[LFOEffectSetting].value == 2) {
-      note.lpf_amp = u8ranged (note.lpf_amp_base + (lfo_effect >> 8));
-    } else if (settings[LFOEffectSetting].value == 3) {
-      note.osc2_mag = u8ranged (note.osc2_mag_base + (lfo_effect >> 8));
-    } else if (settings[LFOEffectSetting].value == 4) {  // NOTE: The two frequency shifting effects are pretty CPU intensive. You probably won't get full polphony while using these.
-      // sorry about all the shifting (in order to avoid floats _and_ int overflow). Read it as: (note.osc1_f_base * 2 / (2 + lfo_effect)), with lfo-effect ranging from -1 to 1
-      note.oscil.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc1_f_base) * ((1<<24) / ((1<<16) + lfo_effect))) >> 8); // corresponds to a max freq shift between .5 and 1.5 of the center
-      // TODO: can we have something approaching a log scale (i.e. +/- 1 octave), without really expensive floating point stuff?
-      // Perhaps going via mtof_Q16n16()? (That uses linear interpolation between notes, though, and we'll be sweeping across such ranges)
-    } else if (settings[LFOEffectSetting].value == 5) {
-      note.oscil.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc1_f_base) * ((1<<24) / ((1<<16) + lfo_effect))) >> 8);
-      note.oscil2.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc2_f_base) * ((1<<24) / ((1<<16) + lfo_effect))) >> 8);
-    } else if (settings[LFOEffectSetting].value == 6) {
-      note.oscil.setPhaseModulation((Q15n16) lfo_effect);
-    } else if (settings[LFOEffectSetting].value == 7) {
-      note.oscil.setPhaseModulation((Q15n16) lfo_effect);
-      note.oscil2.setPhaseModulation((Q15n16) lfo_effect);
+    int8_t effectenv_cur = note.effect_env.next ();
+    int16_t effects[EFFECTS_COUNT] = {0};
+    effects[settings[EffectWhat1Setting].value] = effectenv_cur * settings[EffectAmp1Setting].value;
+    effects[settings[EffectWhat2Setting].value] += effectenv_cur * settings[EffectAmp2Setting].value;
+    effects[settings[LFOEffectSetting].value] += note.lfo.next()*(note.lfo_amp_base + (effects[LFOAmpEffect] / 256));
+
+    for (uint8_t i = 0; i < EFFECTS_COUNT; ++i) {
+      // TODO: Applying all effects in each iteration is sort of wasteful, but profiling suggests that optimizations, here, are not a high priority.
+      int16_t effect_size = effects[i];
+
+      if (i == LowPassFilterCutOffEffect) {
+        note.lpf.setCutoffFreq(u8ranged (note.lpf_cutoff_base+(effect_size / 256)));  // note: division not bitshift for defined behavior on signed int
+      } else if (i == LowPassFilterResonanceEffect) {
+        note.lpf.setResonance(u8ranged (note.lpf_resonance_base+(effect_size / 512)));
+      } else if (i == LowPassFilterAmpEffect) {
+        note.lpf_amp = u8ranged (note.lpf_amp_base + (effect_size / 256));
+      } else if (i == OscMixEffect) {
+        note.osc2_mag = u8ranged (note.osc2_mag_base + (effect_size / 256));
+      } else if (i == Osc1FreqEffect) {
+        // sorry about all the shifting (in order to avoid floats _and_ int overflow). Read it as: (note.osc1_f_base * 2 / (2 + effect_size)), with effect_size ranging from -1 to 1
+        note.oscil.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc1_f_base) * ((1<<24) / ((1<<16) + effect_size))) >> 8); // corresponds to a max freq shift between .5 and 1.5 of the center
+        // TODO: can we have something approaching a log scale (i.e. +/- 1 octave), without really expensive floating point stuff?
+        // Perhaps going via mtof_Q16n16()? (That uses linear interpolation between notes, though, and we'll be sweeping across such ranges)
+      } else if (i == BothOscFreqEffect) {
+        note.oscil.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc1_f_base) * ((1<<24) / ((1<<16) + effect_size))) >> 8);
+        note.oscil2.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.osc2_f_base) * ((1<<24) / ((1<<16) + effect_size))) >> 8);
+      } else if (i == Osc1PhaseEffect) {
+        note.oscil.setPhaseModulation((Q15n16) effect_size);
+      } else if (i == BothOscPhaseEffect) {
+        note.oscil.setPhaseModulation((Q15n16) effect_size);
+        note.oscil2.setPhaseModulation((Q15n16) effect_size);
+      } else if (i == LFOFreqEffect) {
+        if (IS_NOISE_TABLE(settings[LFOWaveFormSetting].value)) {
+          // HACK: For LFO, noise waveform is best served _slow_
+          note.lfo.setFreq_Q16n16 ((Q16n16_to_Q24n8 (note.lfo_f_base) * ((1<<222) / ((1<<16) + effect_size))) >> 14);
+        } else {
+          note.lfo.setFreq_Q24n8 ((Q16n16_to_Q24n8 (note.lfo_f_base) * ((1<<22) / ((1<<16) + effect_size))) >> 6);
+        }
+      } else {
+        // LFO Amp modulation already handled outside the loop
+      }
     }
   }
 }
@@ -324,6 +353,7 @@ void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
       note.oscil.setPhase (0); // Make sure oscil1 and oscil2 start in sync
       note.oscil.setFreq_Q24n8 (Q16n16_to_Q24n8 (note.osc1_f_base));
       note.env.noteOn();
+      note.effect_env.noteOn();
       note.velocity = velocity;
 
       // LPF
@@ -342,6 +372,7 @@ void MyHandleNoteOff(byte channel, byte pitch, byte velocity) {
     if (notes[i].note == pitch) {
       if (!notes[i].isPlaying ()) continue;
       notes[i].env.noteOff ();
+      notes[i].effect_env.noteOff ();
       notes[i].note = 0;
       break;
     }

@@ -132,7 +132,7 @@ void MIDIPlayer::update () {
   
   if (state == PlayingRandom) {
     uint32_t now = mozziMicros();
-    if (now - event_time > 1000000ul) {
+    if (now - event_time > 2000000ul) {
       MyHandleNoteOn (1, rand (20) + 77, 100);
       event_time = now;
     }

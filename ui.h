@@ -1,3 +1,23 @@
+/*  Almost Serious Synth
+ *
+ *  UI (menu) definitions
+ *
+ *  Copyright (c) 2017, 2018 Thomas Friedrichsmeier
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef UI_H
 #define UI_H
 /** This file contains the structures and logic for making the UI work. */
@@ -13,6 +33,7 @@ public:
   enum PageID {
     MenuPage1,
     SynthSettingsPage1,
+    SynthSettingsPage2,
     SelectExistingFile,
     SaveFile
   };
@@ -23,9 +44,11 @@ protected:
   static UIPage* current_page;
 };
 
-/** UI specification for the (a) synthesizer settings screen. In essence, button
+/** UI specification for a synthesizer settings screen. In essence, button
  * press selects the setting to tune, encoder ticks change the setting value. */
 class SynthSettingsPage : public UIPage {
+public:
+  SynthSettingsPage (uint8_t offset);
   void drawIconForSetting (uint8_t setting, bool active);
   void initDisplay () override;
   void handleUpDown (int8_t delta) override; 
@@ -33,6 +56,7 @@ class SynthSettingsPage : public UIPage {
   void handleButton (int8_t button) override;
 private:
   uint8_t current_setting = NothingSetting;
+  uint8_t offset;
   bool update = false;
 };
 

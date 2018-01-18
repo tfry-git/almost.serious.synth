@@ -3,6 +3,7 @@
 
 #include "wavetables.h"
 
+// TOOD: Keeping both const and non-const vlues inside the same struct is sort of wasteful on RAM... Migh want to change that, eventually.
 struct Setting {
   const char* name;
   const char* shortname;
@@ -35,9 +36,44 @@ enum Settings {
   LPFAmpSetting,
   NothingSetting,
 
+// page 2
+  EffectAttackSetting,
+  EffectDecaySetting,
+  EffectSustainSetting,
+  EffectReleaseSetting,
+
+  EffectAmp1Setting,
+  EffectWhat1Setting,
+  EffectAmp2Setting,
+  EffectWhat2Setting,
+
+  NothingSetting1,  // always need 16 settings per page, in currently implementation
+  NothingSetting2,
+  NothingSetting3,
+  NothingSetting4,
+
+  NothingSetting5,
+  NothingSetting6,
+  NothingSetting7,
+  NothingSetting8,
+
   SETTINGS_COUNT
 };
 extern Setting settings[SETTINGS_COUNT];
+
+enum Effects {
+  LowPassFilterCutOffEffect,
+  LowPassFilterResonanceEffect,
+  LowPassFilterAmpEffect,
+  OscMixEffect,
+  Osc1FreqEffect,
+  BothOscFreqEffect,
+  Osc1PhaseEffect,
+  BothOscPhaseEffect,
+  LFOFreqEffect,
+  LFOAmpEffect,
+  EFFECTS_COUNT
+};
 
 void saveVoice (const char* name);
 void loadVoice (const char* name = "");

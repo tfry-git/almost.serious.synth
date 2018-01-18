@@ -1,4 +1,4 @@
-# Almost Serious Synth, with - currently - 15 adjustable parameters, MIDI recording, and polyphony.
+# Almost Serious Synth, with 20+ adjustable parameters, MIDI recording, and polyphony.
 
 - Based on the Mozzi sound synthesis library.
 - The Synth setup is mostly inspired by AMSynth (but adds some more complex wave forms).
@@ -39,16 +39,23 @@ row 2, column 3, etc.
 For the time being, when starting, the Synth will play random notes on startup, which is pretty useful during development. To turn this off,
 go the main menu, and select "Stop" (row 3, column 2). It will load the first saved voice on startup.
 
-## Synthesizer settings
+## Synthesizer settings - Page 1
 - Top row: Envelope - Attack, Decay, Sustain, Release
 - Row 2: Wave mixing - Oscillator 1 waveform, Oscillator mix ratio, Oscillator 2 waveform, Oscillator 2 tune, given in half-tones above below Oscillator 1
 - Row 3: Low frequency oscillator: Waveform, Frequency, Amplitude (initially set to 0, i.e. disabled), Parameter to modulate
 - Bottom 4: Low pass filter: Cutoff frequency, Resonance, Amplitude (initially set to 0, i.e. unfiltered)
 - Bottom - right button: Exit to main menu
 
+## Synthesizer settings - Page 2
+- Top row: Envelope for the effects given in the next row - Attack, Decay, Sustain, Release
+- Row 2: Two effects controlled by the above envelope, each with separate max amplitude ("A"), and effect target ("X")
+- Row 3: - Not yet used -
+- Bottom 4: - Not yet used -
+- Bottom - right button: Exit to main menu
+
 ## Main menu
 - Top row: This is just a caption for Synthesizer options in  the next row
-- Row 2: "Edit" -> Go to the synthesizer settings page; "Save"/"Load" -> Save / load current voice to/from SD card
+- Row 2: "Edit" -> Go to the synthesizer settings page 1; "Edi2" -> Go to synthesizer settings page 2; "Save"/"Load" -> Save / load current voice to/from SD card
 - Row 3: Caption for the MIDI related options in the next row
 - Row 4: "Rec/Stop" -> Start / end recording MIDI from MIDI in; "Play/Stop" -> Play / stop playing the current MIDI sequence; "Save"/"Load" -> Save / load MIDI track to/from SD card
 
@@ -92,8 +99,11 @@ Saving / loading of voices / MIDI files is still pretty clumsy. That needs impro
 One obviously useful extension will be to allow multi-track MIDI recordings (as we already support playing back multi-track MIDI files, the main trouble will be the UI), to turn
 the Synth into a full MIDI sequencer. To go along with that the ability to set separate voices for each track.
 
-There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. To add anything more, we'll need more
-"pages" of settings, or a larger display. (Ok, CPU power is approaching limits when many notes are played simultaneously, but for isolated notes, we could stack on a lot more).
+There's also some flash and CPU power left to add more synth effects! The limit currently is the UI / display, really. Some ideas on _what_ to add:
+- Oscillator sync
+- More time based effects (line / phasor)
+- Reverb - but that needs lots of RAM
+- Filters other than LPF.
 
 It may make sense to switch to larger IL9341 based TFT. One popular offering at the time of this writing - while twice the price of an SSD1306 display - sports a 240*320 resolution,
 includes an SD slot _and_ features a touch-screen, which could allow for a pretty intuitive UI. At any rate, the idea is to keep the project mostly modular, so it can be adjusted
