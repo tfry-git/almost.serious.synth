@@ -169,8 +169,6 @@ void setup() {
   player.setupMIDI ();
   for (byte i = 0; i < NOTECOUNT; ++i) {
     notes[i].env.setADLevels(200,100);
-    notes[i].env.setDecayTime(100);
-    notes[i].env.setSustainTime(1000);
     notes[i].effect_env.setSustainTime(64000);
     notes[i].note = 0;
   }
@@ -352,7 +350,7 @@ void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
       note.oscil.setPhase (0); // Make sure oscil1 and oscil2 start in sync
       note.oscil.setFreq_Q24n8 (Q16n16_to_Q24n8 (note.osc1_f_base));
       note.env.noteOn();
-      note.effect_env.noteOn();
+      note.effect_env.noteOn(true);  // Compilation error on this line? Remove the "true", until Mozzi has merged https://github.com/sensorium/Mozzi/pull/40 . Effect envelope will behave strangley, then, however.
       note.velocity = velocity;
 
       // LPF
