@@ -3,7 +3,7 @@
  *  See README.md for details and instructions.
  *  
  *
- *  Copyright (c) 2017 Thomas Friedrichsmeier
+ *  Copyright (c) 2017-2018 Thomas Friedrichsmeier
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -233,6 +233,7 @@ void updateControl() {
 
   UIPage::currentPage ()->handleButton (keypad.read ());
   UIPage::currentPage ()->handleUpDown (read_updown ());
+  UIPage::currentPage ()->handleLeftRight (read_leftright ());
   UIPage::currentPage ()->updateDisplay ();
 
   // If you enable the line below, here (and disable the corresponding line in MyHandleNoteOn(), notes _already playing_ will be affected by pot settings.
@@ -350,7 +351,7 @@ void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
       note.oscil.setPhase (0); // Make sure oscil1 and oscil2 start in sync
       note.oscil.setFreq_Q24n8 (Q16n16_to_Q24n8 (note.osc1_f_base));
       note.env.noteOn();
-      note.effect_env.noteOn(true);  // Compilation error on this line? Remove the "true", until Mozzi has merged https://github.com/sensorium/Mozzi/pull/40 . Effect envelope will behave strangley, then, however.
+      note.effect_env.noteOn();  // Compilation error on this line? Remove the "true", until Mozzi has merged https://github.com/sensorium/Mozzi/pull/40 . Effect envelope will behave strangley, then, however.
       note.velocity = velocity;
 
       // LPF

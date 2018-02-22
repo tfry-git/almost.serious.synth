@@ -55,9 +55,27 @@ void SynthSettingsPage::handleUpDown (int8_t delta) {
     Setting& setting = settings[current_setting];
     update = true;
     int mult = (abs (setting.value / setting.dynamic_res) >> USER_INPUT_HIGHER_RES) + 1;
-    setting.value += delta * mult;
-    if (setting.value < setting.min) setting.value = setting.min;
-    if (setting.value > setting.max) setting.value = setting.max;
+    int32_t newval = setting.value + delta * mult;  // NOTE: do not operate on setting.value, directly, as it might be near overflow!
+    if (newval < setting.min) newval = setting.min;
+    if (newval > setting.max) newval = setting.max;
+    setting.value = newval;
+  }
+}
+
+void SynthSettingsPage::handleLeftRight (int8_t delta) {
+  if (delta == 0) return;
+  if (delta > 0) {
+    if (current_page == &synthsettings_page1) {
+      setCurrentPage (SynthSettingsPage2);
+    } else {
+      setCurrentPage (MenuPage1);
+    }
+  } else {
+    if (current_page == &synthsettings_page2) {
+      setCurrentPage (SynthSettingsPage1);
+    } else {
+      setCurrentPage (MenuPage1);
+    }
   }
 }
 
@@ -97,6 +115,12 @@ void MenuPage::initDisplay () {
 
 void MenuPage::handleUpDown (int8_t delta) {
   // TODO: scrolling (once necessary)
+}
+
+void MenuPage::handleLeftRight (int8_t delta) {
+  if (delta == 0) return;
+  if (delta > 0) setCurrentPage (SynthSettingsPage1);
+  else setCurrentPage (SynthSettingsPage2);
 }
 
 void loadMIDIFile (const char *file) {

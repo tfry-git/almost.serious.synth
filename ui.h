@@ -27,7 +27,8 @@
 /** Base class for all "pages" / screens of the UI */
 class UIPage {
 public:
-  virtual void handleUpDown (int8_t delta) = 0;   /// handle encoder input (+/-)
+  virtual void handleUpDown (int8_t delta) = 0;   /// handle "up / down" input (value change)
+  virtual void handleLeftRight (int8_t delta) {}; /// handle "left right" (page change)
   virtual void handleButton (int8_t but) = 0;  /// handle button (matrix) press
   virtual void updateDisplay () = 0;           /// update display (if necessary)
   enum PageID {
@@ -52,6 +53,7 @@ public:
   void drawIconForSetting (uint8_t setting, bool active);
   void initDisplay () override;
   void handleUpDown (int8_t delta) override; 
+  void handleLeftRight (int8_t delta) override;
   void updateDisplay () override;
   void handleButton (int8_t button) override;
 private:
@@ -65,6 +67,7 @@ class MenuPage : public UIPage {
 public:
   void initDisplay () override;
   void handleUpDown (int8_t delta) override;
+  void handleLeftRight (int8_t delta) override;
   void handleButton (int8_t but);
   void updateDisplay ();
 private:
