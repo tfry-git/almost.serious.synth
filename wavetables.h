@@ -4,6 +4,7 @@
 /* The waveforms to use. Note that for the time being, we support exactly two distinct table sizes (TABLE_SIZE_A, TABLE_SIZE_B).
 Lower table sizes, help to keep the sketch size small, but are not as pure (which may not even be a bad thing)
 */
+#include <MozziGuts.h>
 #include <tables/sin2048_int8.h>
 #include <tables/saw2048_int8.h>
 #include <tables/triangle2048_int8.h>

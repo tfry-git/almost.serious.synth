@@ -163,7 +163,7 @@ void setup() {
   pinMode (LED_BUILTIN, OUTPUT);
   setup_display ();
   display_detail ("Starting:", "Storage");
-  setup_storage ();
+  //setup_storage ();
 
   display_detail ("Starting:", "MIDI");
   player.setupMIDI ();
@@ -173,8 +173,8 @@ void setup() {
     notes[i].note = 0;
   }
 
-  setup_updown ();
-  setup_keypad ();
+  //setup_updown ();
+  //setup_keypad ();
 
   display_detail ("Loading:", "Settings");
   loadVoice ();
@@ -231,9 +231,9 @@ void updateControl() {
   player.update ();
 //  digitalWrite (PC13, buf1 - bufferedSamples () < 100);
 
-  UIPage::currentPage ()->handleButton (keypad.read ());
-  UIPage::currentPage ()->handleUpDown (read_updown ());
-  UIPage::currentPage ()->handleLeftRight (read_leftright ());
+//  UIPage::currentPage ()->handleButton (keypad.read ());
+//  UIPage::currentPage ()->handleUpDown (read_updown ());
+//  UIPage::currentPage ()->handleLeftRight (read_leftright ());
   UIPage::currentPage ()->updateDisplay ();
 
   // If you enable the line below, here (and disable the corresponding line in MyHandleNoteOn(), notes _already playing_ will be affected by pot settings.
