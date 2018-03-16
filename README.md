@@ -16,7 +16,6 @@
 - Uses a 4x4 keypad matrix to select one of the settings (bottom right button to exit to "menu"),
   pin connections defined in matrix.h (default is PA4-7 for the rows, PB0, PB1, PB10, PB11 for the cols).
 - Uses two potentiometers (or better: a single joystick) to adjust the current setting up / down (wipers connected to PA0, and PA1), and the current UI page left / right.
-  - _Alternatively_, you can also use a rotary encoder, by adjusting just a few defines in userinput.h.
   - You could replace also this with simple +/- buttons - all you will have to do is provide appropriate versions of setup_updown(), read_updown(), and read_leftright()
   (trivial for buttons).
 - Uses a 128*64 pixel SSD1306 display with I2C interface, on the default I2C pins (PB6, PB7). To use a different display,
