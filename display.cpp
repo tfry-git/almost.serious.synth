@@ -3,6 +3,7 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
+#include "userinput.h"
 
 #define DISPLAY_ILI9341   // ILI9341-based color display 320*240
 //#define DISPLAY_SSD1306    // SSD1306-based b/w display 128*64
@@ -23,6 +24,8 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
     #define DETAILS_OFFSETY 57
     #define DETAILS_WIDTH 128
     #define DETAILS_HEIGHT 7
+    #define MAXX 127
+    #define MAXY 63
 
     #define BG_COLOR 0
     #define FG_COLOR 1
@@ -35,11 +38,11 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
     #define FONT_OFFSET() (0u)
     void display_printBottomRightAligned(uint16_t x, uint16t_y, const char* value) {
         display.setCursor(x-strlen(value)*FONT_SPACING, y-FONT_SPACING);
-        display.println(value);
+        display.print(value);
     }
     void display_printTopLeftAligned(uint16_t x, uint16_t_y, const char* value) {
         display.setCursor(x, y);
-        display.println(value);
+        display.print(value);
     }
 #elif defined(DISPLAY_ILI9341)
     #include <Adafruit_ILI9341_STM.h>
@@ -58,13 +61,16 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
     #define DETAILS_OFFSETY 220
     #define DETAILS_WIDTH (SECTION_WIDTH*4-SECTION_SPACING)
     #define DETAILS_HEIGHT 19
+    #define HEADER_HEIGHT 17
+    #define MAXX 319
+    #define MAXY 239
 
     #define BG_COLOR 0
     #define FG_COLOR display.color565(255,255,255)
     #define SECTION_BG_ACTIVE display.color565(20,50,50)
     #define SECTION_BG_INACTIVE display.color565(20,20,20)
-    #define SECTION_FG_ACTIVE display.color565(255,125,125)
-    #define SECTION_FG_INACTIVE display.color565(255,255,255)
+    #define SECTION_FG_ACTIVE display.color565(255,255,255)
+    #define SECTION_FG_INACTIVE display.color565(255,125,125)
     #define SECTION_FG_OUTLINE SECTION_FG_ACTIVE
 
     #include <Fonts/FreeSans9pt7b.h>
@@ -75,11 +81,11 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
        uint16_t bw, bh;
        display.getTextBounds(const_cast<char*> (value), 10, 10, &bx, &by, &bw, &bh);  // NOTE: cannot use x, here, as that may "draw" out of the display bounds, returning garbage.
        display.setCursor(x - bw, y);
-       display.println(value);
+       display.print(value);
     }
     void display_printTopLeftAligned(uint16_t x, uint16_t y, const char* value) {
        display.setCursor(x, y+FONT_OFFSET());
-       display.println(value);
+       display.print(value);
     }
 #endif
 
@@ -87,7 +93,7 @@ void display_clear() {
 #ifdef DISPLAY_SSD1306
     display.clearDisplay();
 #elif defined(DISPLAY_ILI9341)
-    display.fillRect(0, 0, 320, 240, BG_COLOR);
+    display.fillScreen(BG_COLOR);
 #endif
 }
 
@@ -97,21 +103,92 @@ void display_commit() {
 #endif
 }
 
-Struct Dimensions {
+void display_pause() {
+#if defined(DISPLAY_ILI9341)
+    display.endTransaction();
+#endif
+}
+
+void display_resume() {
+#if defined(DISPLAY_ILI9341)
+    display.beginTransaction();
+#endif
+}
+
+struct Dimensions {
+    Dimensions(uint16_t _x, uint16_t _y, uint16_t _w, uint16_t _h) : x(_x), y(_y), w(_w), h(_h) {};
+    Dimensions() {};
     uint16_t x, y, w, h;
+    bool contains(uint16_t px, uint16_t py) {
+        return (px >= x && px <= (x + w) && py >= y && py <= (y + h));
+    }
 };
+
+void draw_icon_box(Dimensions &dims, bool active) {
+    display.drawRect(dims.x, dims.y, dims.w, dims.h, SECTION_FG_OUTLINE);
+    display.fillRect(dims.x+1, dims.y+1, dims.w-2, dims.h-2, active ? SECTION_BG_ACTIVE : SECTION_BG_INACTIVE);
+}
+
+void display_page_header(const char* label, bool lr_buttons) {
+#ifdef DISPLAY_SSD1306
+    // ignore
+#else
+    display.setTextColor(SECTION_FG_ACTIVE);
+    display_printTopLeftAligned(20, 2, label);
+#ifdef TOUCHSCREEN_INPUT
+    if (lr_buttons) {
+        Dimensions dims(0, 0, 20 - SECTION_SPACING, HEADER_HEIGHT);
+        draw_icon_box(dims, false);
+        display_printTopLeftAligned(dims.x + 2, dims.y + 2, "<");
+        dims.x = DETAILS_WIDTH - 20 + SECTION_SPACING;
+        draw_icon_box(dims, false);
+        display_printTopLeftAligned(dims.x + 2, dims.y + 2, ">");
+    }
+#endif
+#endif
+}
+
+inline Dimensions udBarDimensions() {
+    return Dimensions(DETAILS_WIDTH + SECTION_SPACING, HEADER_HEIGHT, MAXX - DETAILS_WIDTH - SECTION_SPACING, MAXY-HEADER_HEIGHT);
+}
+
+inline Dimensions udButtonDimensions(bool up) {
+    Dimensions ret = udBarDimensions();
+    if (!up) ret.y += ret.h - 20;
+    ret.h = 20;
+    return ret;
+}
+
+// Draw up / down scrollbar, with the current position given between 0 (bottom) and 1 << 15 (top)
+void display_ud_bar(uint16_t current_step, bool show) {
+#ifdef TOUCHSCREEN_INPUT
+    display.setTextColor(SECTION_FG_ACTIVE);
+    Dimensions fulldims = udBarDimensions();
+    Dimensions dims = udButtonDimensions(true);
+    draw_icon_box(dims, false);
+    display_printTopLeftAligned(dims.x + 4, dims.y + 2, "+");
+    dims = udButtonDimensions(false);
+    draw_icon_box(dims, false);
+    display_printTopLeftAligned(dims.x + 4, dims.y + 2, "-");
+    display.drawLine(fulldims.x + (fulldims.w/2), fulldims.y + 20, fulldims.x + (fulldims.w/2), fulldims.y + fulldims.h - 20, SECTION_FG_ACTIVE);
+
+    uint16_t pos = (((uint32_t) fulldims.h - 40) * current_step) / (1 << 15);
+    display.drawRect (fulldims.x, fulldims.y + fulldims.h - 20 - pos, fulldims.w, 2, SECTION_FG_INACTIVE);
+#endif
+}
+
 Dimensions sectionDimensions(int8_t row, int8_t col) {
     Dimensions ret;
     ret.x = SECTION_OFFSETX + col*SECTION_WIDTH;
     ret.y = SECTION_OFFSETY + row*SECTION_HEIGHT;
     ret.w = SECTION_WIDTH - SECTION_SPACING;
     ret.h = SECTION_HEIGHT - SECTION_SPACING;
+    return ret;
 }
 
 void display_icon(int8_t row, int8_t col, const char *shortname, const char* value, bool active) {
     Dimensions dims = sectionDimensions (row, col);
-    display.drawRect(dims.x, dims.y, dims.w, dims.h, SECTION_FG_OUTLINE);
-    display.fillRect(dims.x+1, dims.y+1, dims.w-2, dims.h-2, active ? SECTION_BG_ACTIVE : SECTION_BG_INACTIVE);
+    draw_icon_box(dims, active);
     if (col != 0) display.fillRect(dims.x-SECTION_SPACING, dims.y, SECTION_SPACING, dims.h, BG_COLOR);
     display.setTextColor(active ? SECTION_FG_ACTIVE : SECTION_FG_INACTIVE);
     display_printTopLeftAligned(dims.x + 2, dims.y + 2, shortname);
@@ -124,12 +201,113 @@ void display_button (int8_t row, int8_t col, const char *name) {
     display_icon (row, col, "----", name, false);
 }
 
+#ifdef TOUCHSCREEN_INPUT
+#include <XPT2046_touch.h>
+#define TS_CS PB5
+SPIClass spi1(1);
+XPT2046_touch ts = XPT2046_touch(TS_CS, spi1);
+void display_detail(const char *label, const char* value);
+class TouchScreenButtonHandler {
+public:
+    TouchScreenButtonHandler() : udlrbutton(NoButton), numbutton(-1) {};
+    enum {
+        UpButton, DownButton, LeftButton, RightButton, NoButton
+    } udlrbutton;
+    int8_t numbutton;
+    void update() {
+        #warning FIX THIS MESS
+        bool any_pressed = false;
+        TS_Point r;
+        if (!digitalRead(PB6)) {
+        display_pause();
+            r = ts.getPoint();
+        display_resume();
+            if (r.z) any_pressed = true;
+        }
+        if (any_pressed) {
+            TS_Point p; // scaling: TODO calibrate and store calibration data
+#define TS_MINX 150
+#define TS_MINY 130
+#define TS_MAXX 4000
+#define TS_MAXY 4010
+
+  p.x = map(r.y, TS_MAXX, TS_MINX, 0, display.width());
+  p.y = map(r.x, TS_MINY, TS_MAXY, 0, display.height());
+
+            Dimensions uddim = udBarDimensions();
+            if (uddim.contains(p.x, p.y)) {
+                if (udButtonDimensions(true).contains(p.x, p.y)) {
+                    udlrbutton = UpButton;
+                    tick_sent = 0;
+                } else if (udButtonDimensions(false).contains(p.x, p.y)) {
+                    udlrbutton = DownButton;
+                    tick_sent = 0;
+                } else {
+                    udlrbutton = NoButton;
+                }
+            } else {
+                udlrbutton = NoButton;
+            }
+                    udlrbutton = DownButton;
+        } else {
+            udlrbutton = NoButton;
+            numbutton = -1;
+        }
+    }
+    int8_t read_updown() {
+        display_detail("read", "a");
+        if ((udlrbutton != UpButton) && (udlrbutton != DownButton)) return 0;
+        uint32_t now = millis();
+        if (tick_sent && (now - tick_sent < TOUCHSCREEN_INPUT_REPEAT_TIMEOUT)) return 0;
+
+        int8_t ret;
+        if (now - pressed_since > TOUCHSCREEN_INPUT_ACCEL_TIMEOUT) {
+            ret = (udlrbutton == UpButton) ? -TOUCHSCREEN_INPUT_ACCEL : TOUCHSCREEN_INPUT_ACCEL;
+        } else {
+            ret = (udlrbutton == UpButton) ? -1 : 1;
+        }
+        display_detail("read", "ud");
+        tick_sent = now;
+        return ret;
+    }
+    int8_t read_leftright() {
+        if ((udlrbutton != LeftButton) && (udlrbutton != RightButton)) return 0;
+        if (pressed_since < tick_sent) return 0;  // no key repeat for left/right
+
+        tick_sent = pressed_since;
+        if (udlrbutton == LeftButton) {
+            return -1;
+        }
+        return 1;
+    }
+    uint32_t pressed_since;
+    uint32_t tick_sent;
+} ts_button_handler;
+
+int8_t read_updown() {
+        display_detail("read", "c");
+    ts_button_handler.update();
+        display_detail("read", "b");
+    return ts_button_handler.read_updown();
+}
+
+int8_t read_leftright() {
+    return ts_button_handler.read_leftright();
+}
+
+void setup_updown () {
+    display_pause();
+    ts.begin();
+    pinMode(PB6,INPUT);
+    display_resume();
+}
+#endif
+
 void display_detail(const char *label, const char* value) {
     display.fillRect(0, DETAILS_OFFSETY, DETAILS_WIDTH, DETAILS_HEIGHT, BG_COLOR);
     display.setTextColor(FG_COLOR);
     display_printTopLeftAligned(1, DETAILS_OFFSETY+1, label);
     display_printBottomRightAligned(DETAILS_WIDTH-1, DETAILS_OFFSETY+FONT_OFFSET()+1, value);
-    display.println(value);
     display_commit();
 }
 

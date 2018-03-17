@@ -18,6 +18,10 @@ void display_detail(const char *label, const char* value);
 // Draw a (menu) header. Note: x, y, w, and h given in logical sections, i.e. 1..4
 void display_header_bar(const char *label, int8_t row);
 void display_line (const char *line, int8_t row);
+void display_page_header(const char* label, bool lr_buttons);
+void display_ud_bar(uint16_t current_step, bool show);
+void display_pause();
+void display_resume();
 
 #endif
 

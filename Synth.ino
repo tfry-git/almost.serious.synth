@@ -173,8 +173,8 @@ void setup() {
     notes[i].note = 0;
   }
 
-  //setup_updown ();
   //setup_keypad ();
+  setup_updown ();
 
   display_detail ("Loading:", "Settings");
   loadVoice ();
@@ -231,8 +231,8 @@ void updateControl() {
   player.update ();
 //  digitalWrite (PC13, buf1 - bufferedSamples () < 100);
 
-//  UIPage::currentPage ()->handleButton (keypad.read ());
-//  UIPage::currentPage ()->handleUpDown (read_updown ());
+//  UIPage::currentPage ()->handleButton (read_keypad ());
+  UIPage::currentPage ()->handleUpDown (read_updown ());
 //  UIPage::currentPage ()->handleLeftRight (read_leftright ());
   UIPage::currentPage ()->updateDisplay ();
 

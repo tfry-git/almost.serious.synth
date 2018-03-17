@@ -1,5 +1,4 @@
-#ifndef MATRIX_H
-#define MATRIX_H
+#ifdef BUTTON_MATRIX_INPUT
 
 #define DEBOUNCE_DELAY 100  // Only one valid keypress will be detected per given number of ms. Don't set this too low for a cheap button matrix
 
@@ -72,6 +71,10 @@ void setup_keypad () {
   uint8_t keyrows[4] = {PA7,PA6,PA5,PA4};  // for some strange reason, I had a _lot_ of noise on PA11 on my board. Perhaps related to I2C on PB11?
   uint8_t keycols[4] = {PB11,PB10,PB1,PB0};
   keypad.init (keyrows, keycols);
+}
+
+int read_keypad() {
+    return keypad.read();
 }
 
 #endif

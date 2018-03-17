@@ -34,6 +34,7 @@ SaveFilePage save_file_page;
 
 SynthSettingsPage::SynthSettingsPage (uint8_t offset) {
   SynthSettingsPage::offset = offset;
+  current_setting = 0;
 }
 
 void SynthSettingsPage::drawIconForSetting (uint8_t setting, bool active) {
@@ -45,9 +46,12 @@ void SynthSettingsPage::drawIconForSetting (uint8_t setting, bool active) {
 }
 
 void SynthSettingsPage::initDisplay () {
+  display_page_header("Synthesizer settings", true);
   for (uint8_t i = offset; i <= (offset + NothingSetting); ++i) {
     drawIconForSetting (i, i == current_setting);
   }
+  Setting& setting = settings[current_setting];
+  display_ud_bar((uint32_t) (setting.value - setting.min) * (1 << 15) / (setting.max - setting.min), true);
 }
 
 void SynthSettingsPage::handleUpDown (int8_t delta) {
@@ -102,6 +106,7 @@ void SynthSettingsPage::handleButton (int8_t button) {
 }
 
 void MenuPage::initDisplay () {
+  display_page_header("Main menu", true);
   display_header_bar ("Synth voice", 0);
   display_button (1, 0, "Edit");
   display_button (1, 1, "Edi2");
