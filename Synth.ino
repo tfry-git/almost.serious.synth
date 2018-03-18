@@ -37,7 +37,6 @@ void saveVoice ();
 #include "util.h"
 #include "display.h"
 #include "userinput.h"
-#include "matrix.h"
 #include "storage.h"
 #include "wavetables.h"
 #include "synthsettings.h"
@@ -231,13 +230,13 @@ void updateControl() {
   player.update ();
 //  digitalWrite (PC13, buf1 - bufferedSamples () < 100);
 
-//  UIPage::currentPage ()->handleButton (read_keypad ());
+  UIPage::currentPage ()->handleButton (read_keypad ());
   UIPage::currentPage ()->handleUpDown (read_updown ());
-//  UIPage::currentPage ()->handleLeftRight (read_leftright ());
+  UIPage::currentPage ()->handleLeftRight (read_leftright ());
   UIPage::currentPage ()->updateDisplay ();
 
   // If you enable the line below, here (and disable the corresponding line in MyHandleNoteOn(), notes _already playing_ will be affected by pot settings.
-  // Of course, updating more often means more more CPU load. You may have to reduce the NOTECOUNT.
+  // Of course, updating more often means more CPU load. You may have to reduce the NOTECOUNT.
   // updateNotes (notes, NOTECOUNT);
 
   for (byte i = 0; i < NOTECOUNT; ++i) {

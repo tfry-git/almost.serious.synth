@@ -13,7 +13,7 @@
 #define USER_INPUT_HIGHER_RES 2  // You probably want this: Gives only slightly lower granularity at higher values
 
 // Input via 4 by 4 button matrix
-#define BUTTON_MATRIX_INPUT
+//#define BUTTON_MATRIX_INPUT
 
 #define TOUCHSCREEN_INPUT
 #define TOUCHSCREEN_INPUT_ACCEL 5
@@ -22,8 +22,8 @@
 
 ///////////////////// You should not need to modify anything below this line /////////////////////////////
 
-#if ((defined POT_AS_TUNER) + defined (TOUCHSCREEN_INPUT)) != 1
-#error Please define exactly only one up/down input device in userinput.h
+#if ((defined POT_AS_TUNER) + (defined BUTTON_MATRIX_INPUT) + (2 * defined(TOUCHSCREEN_INPUT))) != 2
+#error Please define exactly only one up/down and one button input device in __FILE__
 #endif
 
 #include <Arduino.h>

@@ -129,6 +129,17 @@ void draw_icon_box(Dimensions &dims, bool active) {
     display.fillRect(dims.x+1, dims.y+1, dims.w-2, dims.h-2, active ? SECTION_BG_ACTIVE : SECTION_BG_INACTIVE);
 }
 
+inline Dimensions lrBarDimensions() {
+    return Dimensions(0, 0, DETAILS_WIDTH, HEADER_HEIGHT);
+}
+
+inline Dimensions lrButtonDimensions(bool left) {
+    Dimensions ret = lrBarDimensions();
+    if (!left) ret.x += ret.w - 20 + SECTION_SPACING;
+    ret.w = 20 - SECTION_SPACING;
+    return ret;
+}
+
 void display_page_header(const char* label, bool lr_buttons) {
 #ifdef DISPLAY_SSD1306
     // ignore
@@ -137,10 +148,10 @@ void display_page_header(const char* label, bool lr_buttons) {
     display_printTopLeftAligned(20, 2, label);
 #ifdef TOUCHSCREEN_INPUT
     if (lr_buttons) {
-        Dimensions dims(0, 0, 20 - SECTION_SPACING, HEADER_HEIGHT);
+        Dimensions dims = lrButtonDimensions(true);
         draw_icon_box(dims, false);
         display_printTopLeftAligned(dims.x + 2, dims.y + 2, "<");
-        dims.x = DETAILS_WIDTH - 20 + SECTION_SPACING;
+        dims = lrButtonDimensions(false);
         draw_icon_box(dims, false);
         display_printTopLeftAligned(dims.x + 2, dims.y + 2, ">");
     }
@@ -209,85 +220,95 @@ XPT2046_touch ts = XPT2046_touch(TS_CS, spi1);
 void display_detail(const char *label, const char* value);
 class TouchScreenButtonHandler {
 public:
-    TouchScreenButtonHandler() : udlrbutton(NoButton), numbutton(-1) {};
-    enum {
-        UpButton, DownButton, LeftButton, RightButton, NoButton
-    } udlrbutton;
-    int8_t numbutton;
+    TouchScreenButtonHandler() : button(NoButton), numbutton(-1) {};
     void update() {
-        #warning FIX THIS MESS
-        bool any_pressed = false;
-        TS_Point r;
-        if (!digitalRead(PB6)) {
+        button = NoButton;
         display_pause();
-            r = ts.getPoint();
+        TS_Point r = ts.getPoint();
         display_resume();
-            if (r.z) any_pressed = true;
-        }
-        if (any_pressed) {
+        if (r.z) {
             TS_Point p; // scaling: TODO calibrate and store calibration data
+#warning FIX THIS MESS
+
 #define TS_MINX 150
 #define TS_MINY 130
 #define TS_MAXX 4000
 #define TS_MAXY 4010
 
-  p.x = map(r.y, TS_MAXX, TS_MINX, 0, display.width());
-  p.y = map(r.x, TS_MINY, TS_MAXY, 0, display.height());
+p.x = map(r.x, TS_MAXX, TS_MINX, 0, display.width());
+p.y = map(r.y, TS_MAXY, TS_MINY, 0, display.height());
+//  display.drawPixel(p.x, p.y, display.color565(0, 255, 255));
 
-            Dimensions uddim = udBarDimensions();
-            if (uddim.contains(p.x, p.y)) {
+            if (udBarDimensions().contains(p.x, p.y)) {
                 if (udButtonDimensions(true).contains(p.x, p.y)) {
-                    udlrbutton = UpButton;
-                    tick_sent = 0;
+                    button = UpButton;
                 } else if (udButtonDimensions(false).contains(p.x, p.y)) {
-                    udlrbutton = DownButton;
-                    tick_sent = 0;
-                } else {
-                    udlrbutton = NoButton;
+                    button = DownButton;
                 }
-            } else {
-                udlrbutton = NoButton;
+            } else if (lrBarDimensions().contains(p.x, p.y)) {
+                if (lrButtonDimensions(true).contains(p.x, p.y)) {
+                    button = LeftButton;
+                } else if (lrButtonDimensions(false).contains(p.x, p.y)) {
+                    button = RightButton;
+                }
+            } else  {
+                for (uint8_t i = 0; i < 16; ++i) {
+                    if (sectionDimensions(i / 4, i % 4).contains(p.x, p.y)) {
+                        button = SectionButton;
+                        numbutton = i;
+                        break;
+                    }
+                }
             }
-                    udlrbutton = DownButton;
-        } else {
-            udlrbutton = NoButton;
-            numbutton = -1;
+        }
+        if (!r.z) {  // More reliable than button == NoButton (jitter)
+            pressed_since = 0;
+            tick_sent = false;
+        } else if ((button != NoButton) && (!pressed_since)) {
+            pressed_since = millis();
         }
     }
     int8_t read_updown() {
-        display_detail("read", "a");
-        if ((udlrbutton != UpButton) && (udlrbutton != DownButton)) return 0;
+        if ((button != UpButton) && (button != DownButton)) return 0;
         uint32_t now = millis();
-        if (tick_sent && (now - tick_sent < TOUCHSCREEN_INPUT_REPEAT_TIMEOUT)) return 0;
+        if (tick_sent && ((now - pressed_since) < TOUCHSCREEN_INPUT_REPEAT_TIMEOUT)) return 0;
 
         int8_t ret;
         if (now - pressed_since > TOUCHSCREEN_INPUT_ACCEL_TIMEOUT) {
-            ret = (udlrbutton == UpButton) ? -TOUCHSCREEN_INPUT_ACCEL : TOUCHSCREEN_INPUT_ACCEL;
+            ret = (button == DownButton) ? -TOUCHSCREEN_INPUT_ACCEL : TOUCHSCREEN_INPUT_ACCEL;
         } else {
-            ret = (udlrbutton == UpButton) ? -1 : 1;
+            ret = (button == DownButton) ? -1 : 1;
         }
-        display_detail("read", "ud");
-        tick_sent = now;
+        tick_sent = true;
         return ret;
     }
     int8_t read_leftright() {
-        if ((udlrbutton != LeftButton) && (udlrbutton != RightButton)) return 0;
-        if (pressed_since < tick_sent) return 0;  // no key repeat for left/right
+        if ((button != LeftButton) && (button != RightButton)) return 0;
+        if (tick_sent) return 0;  // no key repeat for left/right
 
-        tick_sent = pressed_since;
-        if (udlrbutton == LeftButton) {
+        tick_sent = true;
+        if (button == LeftButton) {
             return -1;
         }
         return 1;
     }
+    int8_t read_key() {
+        if (button != SectionButton) return -1;
+        if (tick_sent) return -1;
+        tick_sent = true;
+        return numbutton;
+    }
+private:
+    enum Button {
+        UpButton, DownButton, LeftButton, RightButton, SectionButton, NoButton
+    } button;
+    int8_t numbutton;
+    bool tick_sent;
     uint32_t pressed_since;
-    uint32_t tick_sent;
 } ts_button_handler;
 
 int8_t read_updown() {
-        display_detail("read", "c");
     ts_button_handler.update();
-        display_detail("read", "b");
     return ts_button_handler.read_updown();
 }
 
@@ -295,10 +316,16 @@ int8_t read_leftright() {
     return ts_button_handler.read_leftright();
 }
 
+void setup_keypad() {
+}
+
+int read_keypad() {
+   return ts_button_handler.read_key();
+}
+
 void setup_updown () {
     display_pause();
     ts.begin();
-    pinMode(PB6,INPUT);
     display_resume();
 }
 #endif
