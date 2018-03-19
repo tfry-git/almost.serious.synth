@@ -5,15 +5,61 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
 #include <Adafruit_GFX.h>
 #include "userinput.h"
 
-#define DISPLAY_ILI9341   // ILI9341-based color display 320*240
-//#define DISPLAY_SSD1306    // SSD1306-based b/w display 128*64
+/************** Hardware setup section. You may need to adjust this to your needs *****************************/
 
-#ifdef DISPLAY_SSD1306
+    // variant 1: ILI9341 8 bit parallel interface
+    #include <Adafruit_TFTLCD_8bit_STM32.h>
+    #define DISPLAY_320_240_COLOR
+    Adafruit_TFTLCD_8bit_STM32 display;
+    void init_display() {
+        display.reset();
+        display.begin(display.readID());
+        display.setRotation(1);
+    }
+    void display_commit() {}
+    void display_pause() {}
+    void display_resume() {}
+
+/*    // variant 2: ILI 9341 SPI interface.
+    #include <Adafruit_ILI9341_STM.h>
+    #define DISPLAY_320_240_COLOR
+    #define TFT_CS         PB4
+    #define TFT_DC         PA15
+    #define TFT_RST        PB3
+    Adafruit_ILI9341_STM display(TFT_CS, TFT_DC, TFT_RST);
+    SPIClass spi1(1);
+    void init_display() {
+        display.begin(spi1);
+        display.setRotation(1);
+    }
+    void display_commit() {}
+    void display_pause() {  // Needed, if display shares SPI bus with another device
+        display.endTransaction();
+    }
+    void display_resume() {
+        display.beginTransaction();
+    }
+*/
+
+/*    // variant 3: SSD1306 128*64 bw display I2C
     #include <Adafruit_SSD1306_STM32.h>
 
     #define OLED_RESET 4
     Adafruit_SSD1306 display(OLED_RESET);
+    #define DISPLAY_128_64_BW
+    void init_display() {
+        display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+    }
+    void display_commit() {
+        display.display();
+    }
+    void display_pause() {}
+    void display_resume() {}
+*/
 
+/************** End hardware setup section. You should not need to adjust anything below this *****************/
+
+#ifdef DISPLAY_128_64_BW
     #define SECTION_WIDTH 32
     #define SECTION_HEIGHT 13
     #define FONT_SPACING 6
@@ -44,14 +90,7 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
         display.setCursor(x, y);
         display.print(value);
     }
-#elif defined(DISPLAY_ILI9341)
-    #include <Adafruit_ILI9341_STM.h>
-
-    #define TFT_CS         PB4
-    #define TFT_DC         PA15
-    #define TFT_RST        PB3
-    Adafruit_ILI9341_STM display(TFT_CS, TFT_DC, TFT_RST); // SPI1
-
+#elif defined(DISPLAY_320_240_COLOR)
     #define SECTION_WIDTH ((uint16_t) 75)
     #define SECTION_HEIGHT ((uint16_t) 45)
     #define SECTION_SPACING 5
@@ -88,32 +127,6 @@ Display setup. I'm using an SSD1306 128*64. Anything smaller, and you'll have a 
        display.print(value);
     }
 #endif
-
-void display_clear() {
-#ifdef DISPLAY_SSD1306
-    display.clearDisplay();
-#elif defined(DISPLAY_ILI9341)
-    display.fillScreen(BG_COLOR);
-#endif
-}
-
-void display_commit() {
-#ifdef DISPLAY_SSD1306
-    display.display();
-#endif
-}
-
-void display_pause() {
-#if defined(DISPLAY_ILI9341)
-    display.endTransaction();
-#endif
-}
-
-void display_resume() {
-#if defined(DISPLAY_ILI9341)
-    display.beginTransaction();
-#endif
-}
 
 struct Dimensions {
     Dimensions(uint16_t _x, uint16_t _y, uint16_t _w, uint16_t _h) : x(_x), y(_y), w(_w), h(_h) {};
@@ -213,10 +226,6 @@ void display_button (int8_t row, int8_t col, const char *name) {
 }
 
 #ifdef TOUCHSCREEN_INPUT
-#include <XPT2046_touch.h>
-#define TS_CS PB5
-SPIClass spi1(1);
-XPT2046_touch ts = XPT2046_touch(TS_CS, spi1);
 void display_detail(const char *label, const char* value);
 class TouchScreenButtonHandler {
 public:
@@ -224,36 +233,26 @@ public:
     void update() {
         button = NoButton;
         display_pause();
-        TS_Point r = ts.getPoint();
+        int x, y, z;
+        touchpad_getPoint(&x, &y, &z);
         display_resume();
-        if (r.z) {
-            TS_Point p; // scaling: TODO calibrate and store calibration data
-#warning FIX THIS MESS
-
-#define TS_MINX 150
-#define TS_MINY 130
-#define TS_MAXX 4000
-#define TS_MAXY 4010
-
-p.x = map(r.x, TS_MAXX, TS_MINX, 0, display.width());
-p.y = map(r.y, TS_MAXY, TS_MINY, 0, display.height());
-//  display.drawPixel(p.x, p.y, display.color565(0, 255, 255));
-
-            if (udBarDimensions().contains(p.x, p.y)) {
-                if (udButtonDimensions(true).contains(p.x, p.y)) {
+        if (z) {
+            //display.drawPixel(x, y, display.color565(0, 255, 255));
+            if (udBarDimensions().contains(x, y)) {
+                if (udButtonDimensions(true).contains(x, y)) {
                     button = UpButton;
-                } else if (udButtonDimensions(false).contains(p.x, p.y)) {
+                } else if (udButtonDimensions(false).contains(x, y)) {
                     button = DownButton;
                 }
-            } else if (lrBarDimensions().contains(p.x, p.y)) {
-                if (lrButtonDimensions(true).contains(p.x, p.y)) {
+            } else if (lrBarDimensions().contains(x, y)) {
+                if (lrButtonDimensions(true).contains(x, y)) {
                     button = LeftButton;
-                } else if (lrButtonDimensions(false).contains(p.x, p.y)) {
+                } else if (lrButtonDimensions(false).contains(x, y)) {
                     button = RightButton;
                 }
             } else  {
                 for (uint8_t i = 0; i < 16; ++i) {
-                    if (sectionDimensions(i / 4, i % 4).contains(p.x, p.y)) {
+                    if (sectionDimensions(i / 4, i % 4).contains(x, y)) {
                         button = SectionButton;
                         numbutton = i;
                         break;
@@ -261,7 +260,7 @@ p.y = map(r.y, TS_MAXY, TS_MINY, 0, display.height());
                 }
             }
         }
-        if (!r.z) {  // More reliable than button == NoButton (jitter)
+        if (!z) {  // More reliable than button == NoButton (jitter)
             pressed_since = 0;
             tick_sent = false;
         } else if ((button != NoButton) && (!pressed_since)) {
@@ -325,10 +324,14 @@ int read_keypad() {
 
 void setup_updown () {
     display_pause();
-    ts.begin();
+    setup_touchpad();
     display_resume();
 }
 #endif
+
+void display_clear() {
+    display.fillScreen(BG_COLOR);
+}
 
 void display_detail(const char *label, const char* value) {
     display.fillRect(0, DETAILS_OFFSETY, DETAILS_WIDTH, DETAILS_HEIGHT, BG_COLOR);
@@ -360,12 +363,7 @@ void display_header_bar(const char *label, int8_t row) {
 }
 
 void setup_display()   {
-#ifdef DISPLAY_SSD1306
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the correct I2C addr
-#elif defined(DISPLAY_ILI9341)
-  display.begin();
-  display.setRotation(1);
-#endif
+  init_display();
   display_clear();
   SET_MAIN_FONT();
   display.setTextSize(TEXT_SIZE);

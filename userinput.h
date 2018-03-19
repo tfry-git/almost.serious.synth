@@ -34,4 +34,9 @@ int8_t read_leftright ();
 int read_keypad();
 void setup_keypad();
 
+#if defined(TOUCHSCREEN_INPUT)
+void setup_touchpad();
+void touchpad_getPoint(int *x, int *y, int *z);
+#endif
+
 #endif

@@ -162,7 +162,7 @@ void setup() {
   pinMode (LED_BUILTIN, OUTPUT);
   setup_display ();
   display_detail ("Starting:", "Storage");
-  //setup_storage ();
+  setup_storage ();
 
   display_detail ("Starting:", "MIDI");
   player.setupMIDI ();
@@ -184,7 +184,7 @@ void setup() {
   do_profile ();
 #else
   display_detail ("Starting:", "Mozzi");
-  startMozzi(CONTROL_RATE);
+  startMozzi(CONTROL_RATE, NO_SETUP_MOZZI_ADC);
   display_detail ("Startup", "complete");
 #endif
 }
