@@ -6,6 +6,7 @@
   and MIDI recording.
 
 ## Hardware
+### Basis
 - Written for and tested on an STM32F103C8T6 "blue pill". It should be easy to port to almost any other processor / board,
   as long as that is supported by Mozzi. However, do note that it is simply too much for an 8bit processor,
   so not Arduino Uno and friends.
@@ -13,17 +14,23 @@
    officially spec'ed at 64kB flash, (almost) all of these MCUs seem to come with 128kB, actually. _However_, if yours does not, or you
    do not want to stretch your luck, simply remove some of the wave-tables, or use a lower sampling resolution for the tables to import (for both,
    just edit wavetables.h).
-- Uses a 4x4 keypad matrix to select one of the settings (bottom right button to exit to "menu"),
-  pin connections defined in matrix.h (default is PA4-7 for the rows, PB0, PB1, PB10, PB11 for the cols).
-- Uses two potentiometers (or better: a single joystick) to adjust the current setting up / down (wipers connected to PA0, and PA1), and the current UI page left / right.
-  - You could replace also this with simple +/- buttons - all you will have to do is provide appropriate versions of setup_updown(), read_updown(), and read_leftright()
-  (trivial for buttons).
-- Uses a 128*64 pixel SSD1306 display with I2C interface, on the default I2C pins (PB6, PB7). To use a different display,
-  edit display.cpp to your liking. However you'll have a hard time making do with any lower resolution.
 - MIDI connected on Serial1, i.e. PA9, PA10. So far, only RX is used.
 - Audio output on pin PB8 - you can connect a headphone, directly - see Mozzi documentation.
   - Optionally an audio-amp and speaker connected to PB8.
 - An SD card reader is connected on SPI2 (pins PB12(CS) through PB15). Optional.
+
+### Display and inputs - base configuration
+- Currently the default hardware setup is a 240*320 TFT with 8-bit interface (e.g. "mcufriend TFT shield"), and a 4-wire reistive touchscreen
+  controller. This type of display is widely available, and very cheap a the time of this writing. It even has an SD-card interface built in!
+
+### Alternative configurations
+- Alternative to touchscreen:
+  - Can use a 4x4 keypad matrix to select one of the settings (bottom right button to exit to "menu"),
+    pin connections defined in matrix.h (default is PA4-7 for the rows, PB0, PB1, PB10, PB11 for the cols).
+  - Uses two potentiometers (or better: a single joystick) to adjust the current setting up / down (wipers connected to PA0, and PA1), and the current UI page left / right.
+    - You could also replace this with simple +/- buttons - all you will have to do is provide appropriate versions of setup_updown(), read_updown(), and read_leftright()
+      (trivial for buttons).
+- As an alternative screen, supports a 128*64 pixel display (e.g. SSD1306 with I2C interface). See/edit display.cpp for display setup code.
 
 ## Libraries
 - Requires Mozzi with STM32 support. For the time being, get it from here: https://github.com/tfry-git/Mozzi  (until available in the official Mozzi)

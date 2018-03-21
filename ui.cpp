@@ -45,13 +45,16 @@ void SynthSettingsPage::drawIconForSetting (uint8_t setting, bool active) {
   }
 }
 
+void display_ud_bar_helper(Setting& setting, bool init) {
+  display_ud_bar(setting.min, setting.max, setting.value, init);
+}
+
 void SynthSettingsPage::initDisplay () {
   display_page_header("Synthesizer settings", true);
   for (uint8_t i = offset; i <= (offset + NothingSetting); ++i) {
     drawIconForSetting (i, i == current_setting);
   }
-  Setting& setting = settings[current_setting];
-  display_ud_bar((uint32_t) (setting.value - setting.min) * (1 << 15) / (setting.max - setting.min), true);
+  display_ud_bar_helper(settings[current_setting], true);
 }
 
 void SynthSettingsPage::handleUpDown (int8_t delta) {
@@ -63,6 +66,7 @@ void SynthSettingsPage::handleUpDown (int8_t delta) {
     if (newval < setting.min) newval = setting.min;
     if (newval > setting.max) newval = setting.max;
     setting.value = newval;
+    display_ud_bar_helper(setting, false);
   }
 }
 
@@ -102,6 +106,7 @@ void SynthSettingsPage::handleButton (int8_t button) {
     update = update || (current_setting != button);
     drawIconForSetting (current_setting, false);
     current_setting = button;
+    display_ud_bar_helper(settings[current_setting], false);
   }
 }
 
@@ -231,10 +236,10 @@ void SelectFilePage::initDisplay () {
   for (uint16_t i = 0; i < 4; ++i) {
     if (!entry) {
       display_button (i, 0, "Exit");
-      display_icon (i, 3, "", "--------", false);
+      display_text (i, 3, "--------");
     } else {
       display_button (i, 0, "Load");
-      display_icon (i, 3, "", getFileName (entry), false);
+      display_text (i, 3, getFileName (entry));
       entry.close ();
     }
     entry = dir.openNextFile ();
@@ -242,6 +247,7 @@ void SelectFilePage::initDisplay () {
   }
   if (entry) entry.close ();
 
+  display_ud_bar(0, max(pos, 25), max(1, 25-pos), true);  // TODO: wrong, but ok HACK!
   display_detail ("Up/down to scroll", "");
 }
 
@@ -262,7 +268,8 @@ void SelectFilePage::handleButton (int8_t but) {
       entry = dir.openNextFile ();  // skip files, after scrolling
     }
     dir.close ();
-    callback (getFileName (entry));
+    if (entry) callback (getFileName (entry));
+    else (callback(""));
   } else if (but % 4 == 3) {
     dir.close ();
     callback ("");

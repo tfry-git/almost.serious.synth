@@ -12,6 +12,7 @@ void display_clear();
 void display_commit();
 
 void display_icon(int8_t row, int8_t col, const char *shortname, const char* value, bool active);
+void display_text(int8_t row, int8_t col, const char* value);
 void display_button (int8_t row, int8_t col, const char *name);
 /** Display a short message in the detail area. */
 void display_detail(const char *label, const char* value);
@@ -19,7 +20,7 @@ void display_detail(const char *label, const char* value);
 void display_header_bar(const char *label, int8_t row);
 void display_line (const char *line, int8_t row);
 void display_page_header(const char* label, bool lr_buttons);
-void display_ud_bar(uint16_t current_step, bool show);
+void display_ud_bar(int16_t min, int16_t max, int16_t current_step, bool show);
 void display_pause();
 void display_resume();
 

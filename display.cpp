@@ -184,20 +184,25 @@ inline Dimensions udButtonDimensions(bool up) {
 }
 
 // Draw up / down scrollbar, with the current position given between 0 (bottom) and 1 << 15 (top)
-void display_ud_bar(uint16_t current_step, bool show) {
+void display_ud_bar(int16_t min, int16_t max, int16_t current_step, bool show) {
 #ifdef TOUCHSCREEN_INPUT
-    display.setTextColor(SECTION_FG_ACTIVE);
     Dimensions fulldims = udBarDimensions();
-    Dimensions dims = udButtonDimensions(true);
-    draw_icon_box(dims, false);
-    display_printTopLeftAligned(dims.x + 4, dims.y + 2, "+");
-    dims = udButtonDimensions(false);
-    draw_icon_box(dims, false);
-    display_printTopLeftAligned(dims.x + 4, dims.y + 2, "-");
-    display.drawLine(fulldims.x + (fulldims.w/2), fulldims.y + 20, fulldims.x + (fulldims.w/2), fulldims.y + fulldims.h - 20, SECTION_FG_ACTIVE);
+// TODO
+    if (show) {
+        display.setTextColor(SECTION_FG_ACTIVE);
+        Dimensions dims = udButtonDimensions(true);
+        draw_icon_box(dims, false);
+        display_printTopLeftAligned(dims.x + 4, dims.y + 2, "+");
+        dims = udButtonDimensions(false);
+        draw_icon_box(dims, false);
+        display_printTopLeftAligned(dims.x + 4, dims.y + 2, "-");
+    } else {
+        display.fillRect(fulldims.x, fulldims.y + 21, fulldims.w, fulldims.h - 42, BG_COLOR);
+    }
 
-    uint16_t pos = (((uint32_t) fulldims.h - 40) * current_step) / (1 << 15);
-    display.drawRect (fulldims.x, fulldims.y + fulldims.h - 20 - pos, fulldims.w, 2, SECTION_FG_INACTIVE);
+    display.drawLine(fulldims.x + (fulldims.w/2), fulldims.y + 21, fulldims.x + (fulldims.w/2), fulldims.y + fulldims.h - 21, SECTION_FG_ACTIVE);
+    uint16_t pos = ((uint32_t) fulldims.h - 44) * (current_step - min) / (max - min);
+    display.drawRect(fulldims.x, fulldims.y + fulldims.h - 22 - pos, fulldims.w, 2, SECTION_FG_INACTIVE);
 #endif
 }
 
@@ -217,7 +222,12 @@ void display_icon(int8_t row, int8_t col, const char *shortname, const char* val
     display.setTextColor(active ? SECTION_FG_ACTIVE : SECTION_FG_INACTIVE);
     display_printTopLeftAligned(dims.x + 2, dims.y + 2, shortname);
     display_printBottomRightAligned(dims.x + dims.w - 2, dims.y + dims.h - 2, value);
-//    display.display();  // Always followed by a call to display_detail in our sketch, so not needed.
+}
+
+void display_text(int8_t row, int8_t col, const char* value) {
+    Dimensions dims = sectionDimensions (row, col);
+    display.setTextColor(SECTION_FG_ACTIVE);
+    display_printBottomRightAligned(dims.x + dims.w - 2, dims.y + dims.h - 2, value);
 }
 
 void display_button (int8_t row, int8_t col, const char *name) {

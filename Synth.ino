@@ -46,7 +46,7 @@ MIDIPlayer player;
 
 // number of polyphonic notes to handle at most. Increasing this carries the risk of overloading the processor
 // note slots are also one of the main consumers of RAM.
-#define NOTECOUNT 12
+#define NOTECOUNT 16
 
 // Rate (Hz) of calling updateControl(), powers of 2 please.
 #define CONTROL_RATE 128

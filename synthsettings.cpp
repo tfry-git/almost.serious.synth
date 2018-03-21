@@ -76,9 +76,9 @@ void loadVoice (const char* name) {
   for (int i = 0; i < len; ++i) {
     settings[i].value = (buf[i*2] << 8) | buf[i*2+1];
   }
-  for (int i = len; i < SETTINGS_COUNT; ++i) {
+/*  for (int i = len; i < SETTINGS_COUNT; ++i) {
     settings[i].value = max (0, settings[i].min); // TODO: No: initial
-  }
+  } */
   UIPage::setCurrentPage (UIPage::SynthSettingsPage1);
   display_detail ("Loaded voice", getFileName (f));
   f.close ();
